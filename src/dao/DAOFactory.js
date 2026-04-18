@@ -1,17 +1,30 @@
-const UserPostgresDAO = require("./postgres/UserPostgresDAO")
-// const UserMongoDAO = require("../dao/mongo/UserMongoDAO") // después
+// const UserMongoDAO = require("./mongo/UserMongoDAO");
 
-const DB_TYPE = process.env.DB_TYPE || "postgres"
+const DB_TYPE = process.env.DB_TYPE || "postgres";
 
 class DAOFactory {
-  static getUserDAO() {
-    if (DB_TYPE === "mongo") {
-      // return new UserMongoDAO()
-      throw new Error("MongoDAO not implemented yet")
-    }
+  static getUserDAO(db) {
+    switch (DB_TYPE) {
+      case "postgres":
+        return new (require("./postgres/UserPostgresDAO"))(db);
 
-    return new UserPostgresDAO()
+      // case "mongo":
+      //   return new UserMongoDAO();
+
+      default:
+        throw new Error("Unsupported database type");
+    }
+  }
+
+  static getRestaurantDAO(db) {
+    switch (DB_TYPE) {
+      case "postgres":
+        return new (require("./postgres/RestaurantPostgresDAO"))(db)
+
+      default:
+        throw new Error("Unsupported database type")
+    }
   }
 }
 
-module.exports = DAOFactory
+module.exports = DAOFactory;

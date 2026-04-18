@@ -1,8 +1,8 @@
-const restaurantsModel = require("../models/restaurants")
+const restaurantService  = require("../services/restaurantService")
 
 async function getRestaurants(req, res, next) {
     try {
-        const restaurants = await restaurantsModel.getAllRestaurants()
+        const restaurants = await restaurantService.getAllRestaurants()
         res.json(restaurants)
     } catch (error) {
         next(error)
@@ -11,7 +11,7 @@ async function getRestaurants(req, res, next) {
 
 async function getRestaurantById(req, res, next) {
     try {
-        const restaurant = await restaurantsModel.getRestaurantById(req.params.id)
+        const restaurant = await restaurantService.getRestaurantById(req.params.id)
         if (!restaurant) return res.status(404).json({ error: "Restaurant not found" })
         res.json(restaurant)
     } catch (error) {
@@ -22,7 +22,7 @@ async function getRestaurantById(req, res, next) {
 async function createRestaurant(req, res, next) {
     try {
         const { name, description, address } = req.body
-        const restaurant = await restaurantsModel.createRestaurant({
+        const restaurant = await restaurantService.createRestaurant({
             name,
             description,
             address
@@ -35,11 +35,11 @@ async function createRestaurant(req, res, next) {
 
 async function updateRestaurant(req, res, next) {
     try {
-        const restaurant = await restaurantsModel.getRestaurantById(req.params.id)
+        const restaurant = await restaurantService.getRestaurantById(req.params.id)
         if (!restaurant) return res.status(404).json({ error: "Restaurant not found" })
 
         const { name, description, address } = req.body
-        const updated = await restaurantsModel.updateRestaurant(
+        const updated = await restaurantService.updateRestaurant(
             req.params.id,
             { name, description, address }  // corregido: ahora pasa objeto completo
         )
@@ -51,10 +51,10 @@ async function updateRestaurant(req, res, next) {
 
 async function deleteRestaurant(req, res, next) {
     try {
-        const restaurant = await restaurantsModel.getRestaurantById(req.params.id)
+        const restaurant = await restaurantService.getRestaurantById(req.params.id)
         if (!restaurant) return res.status(404).json({ error: "Restaurant not found" })
 
-        await restaurantsModel.deleteRestaurant(req.params.id)
+        await restaurantService.deleteRestaurant(req.params.id)
         res.json({ message: "Restaurant deleted" })
     } catch (error) {
         next(error)
