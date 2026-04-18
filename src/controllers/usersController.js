@@ -1,5 +1,5 @@
 const http = require("http")
-const usersModel = require("../models/users")
+const userService = require("../services/userService")
 
 const KEYCLOAK_URL = process.env.KEYCLOAK_URL
 const REALM = process.env.KEYCLOAK_REALM
@@ -69,7 +69,7 @@ async function getUsers(req, res, next) {
 async function getMe(req, res, next) {
   try {
     const token = req.kauth.grant.access_token.content
-    const user = await usersModel.findOrCreateUser({
+    const user = await userService.findOrCreateUser({
       keycloakId: token.sub,
       email: token.email,
       name: token.preferred_username
