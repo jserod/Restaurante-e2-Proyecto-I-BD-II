@@ -1,5 +1,8 @@
 const DAOFactory = require("../dao/DAOFactory")
 
+
+//Probando playito
+
 const userDAO = DAOFactory.getUserDAO()
 
 async function findOrCreateUser({ keycloakId, email, name }) {
