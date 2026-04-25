@@ -1,4 +1,4 @@
-const usersModel = require("../models/users")
+const userService= require("../services/userService")
 
 async function attachUser(req, res, next) {
   try {
@@ -6,7 +6,7 @@ async function attachUser(req, res, next) {
 
     if (!token) return res.status(401).json({ error: "Unauthorized" })
 
-    const user = await usersModel.findOrCreateUser({
+    const user = await userService.findOrCreateUser({
       keycloakId: token.sub,
       email: token.email,
       name: token.preferred_username

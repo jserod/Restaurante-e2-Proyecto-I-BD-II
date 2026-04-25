@@ -1,5 +1,4 @@
 const DAOFactory = require("../dao/DAOFactory")
-
 const restaurantDAO = DAOFactory.getRestaurantDAO()
 
 class RestaurantService {

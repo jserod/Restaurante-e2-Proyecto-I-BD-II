@@ -83,12 +83,17 @@ async function getMe(req, res, next) {
 async function updateUser(req, res, next) {
   try {
     const adminToken = await getAdminToken()
-    const { username, email, firstName, lastName } = req.body
+    const { email, firstName, lastName } = req.body
+
+    const payload = {}
+    if (email) payload.email = email
+    if (firstName) payload.firstName = firstName
+    if (lastName) payload.lastName = lastName
 
     const response = await fetchRequest(
       "PUT",
       `${KEYCLOAK_URL}/admin/realms/${REALM}/users/${req.params.id}`,
-      JSON.stringify({ username, email, firstName, lastName }),
+      JSON.stringify(payload),
       {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${adminToken}`
@@ -99,7 +104,18 @@ async function updateUser(req, res, next) {
       return res.status(404).json({ error: "User not found" })
     }
 
+    if (response.status !== 204) {
+      throw new Error(`Keycloak error: ${response.status} - ${response.body}`)
+    }
+
+    // sincronizar DB
+    await userService.updateUser(req.params.id, {
+      email,
+      name: `${firstName ?? ""} ${lastName ?? ""}`.trim()
+    })
+
     res.json({ message: "User updated" })
+
   } catch (error) {
     next(error)
   }

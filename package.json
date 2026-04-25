@@ -8,7 +8,9 @@
     "test": "jest --coverage"
   },
   "jest": {
-    "setupFilesAfterEnv": ["<rootDir>/src/tests/jest.setup.js"],
+    "setupFilesAfterEnv": [
+      "<rootDir>/src/tests/jest.setup.js"
+    ],
     "coverageThreshold": {
       "global": {
         "lines": 90
@@ -25,6 +27,7 @@
     "express-session": "^1.19.0",
     "jsonwebtoken": "^9.0.3",
     "keycloak-connect": "^26.1.1",
+    "mongodb": "^7.2.0",
     "pg": "^8.20.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1"

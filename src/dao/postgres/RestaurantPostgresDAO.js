@@ -1,5 +1,5 @@
-const IRestaurantDAO = require("../IRestaurantDAO")
 const pool = require("../../config/database")
+const IRestaurantDAO = require("../interfaces/IRestaurantDAO")
 
 class RestaurantPostgresDAO extends IRestaurantDAO {
 

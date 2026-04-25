@@ -21,20 +21,20 @@ class UserPostgresDAO extends IUserDAO {
     async createUser({ keycloakId, email, name, role }) {
         const result = await pool.query(
             `INSERT INTO users (keycloak_id, email, name, role)
-       VALUES ($1, $2, $3, $4)
-       RETURNING id, keycloak_id, email, name, role`,
+             VALUES ($1, $2, $3, $4)
+             RETURNING id, keycloak_id, email, name, role`,
             [keycloakId, email, name, role || "client"]
         )
         return result.rows[0]
     }
 
-    async updateUser(id, { name, email }) {
+    async updateUser(keycloakId, { name, email }) {
         const result = await pool.query(
             `UPDATE users
-       SET name = $1, email = $2
-       WHERE id = $3
-       RETURNING id, keycloak_id, email, name, role`,
-            [name, email, id]
+             SET name = $1, email = $2
+             WHERE keycloak_id = $3
+             RETURNING id, keycloak_id, email, name, role`,
+            [name, email, keycloakId]
         )
         return result.rows[0]
     }

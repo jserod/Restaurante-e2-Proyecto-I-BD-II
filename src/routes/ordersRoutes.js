@@ -9,47 +9,16 @@ const controller = require("../controllers/ordersController")
 /**
  * @swagger
  * /orders:
- *   post:
- *     summary: Realizar un pedido
+ *   get:
+ *     summary: Listar todos los pedidos
  *     tags: [orders]
  *     security:
  *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [restaurantId, items]
- *             properties:
- *               restaurantId:
- *                 type: integer
- *               reservationId:
- *                 type: integer
- *               pickup:
- *                 type: boolean
- *               items:
- *                 type: array
- *                 items:
- *                   type: object
- *                   required: [menuId, quantity]
- *                   properties:
- *                     menuId:
- *                       type: integer
- *                     quantity:
- *                       type: integer
  *     responses:
- *       201:
- *         description: Pedido creado
- *       400:
- *         description: Order must have at least one item
+ *       200:
+ *         description: Lista de pedidos
  */
-router.post(
-    "/",
-    keycloak.protect(),
-    attachUser,
-    controller.createOrder
-)
+router.get("/", keycloak.protect(), attachUser, controller.getAllOrders)
 
 /**
  * @swagger
@@ -64,38 +33,54 @@ router.post(
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
  *     responses:
  *       200:
  *         description: Datos del pedido
  *       404:
  *         description: Order not found
  */
-router.get(
-    "/:id",
-    keycloak.protect(),
-    attachUser,
-    controller.getOrderById
-)
+router.get("/:id", keycloak.protect(), attachUser, controller.getOrderById)
 
 /**
  * @swagger
  * /orders:
- *   get:
- *     summary: Listar todos los pedidos
+ *   post:
+ *     summary: Realizar un pedido
  *     tags: [orders]
  *     security:
  *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [restaurantId, items]
+ *             properties:
+ *               restaurantId:
+ *                 type: string
+ *               reservationId:
+ *                 type: string
+ *               pickup:
+ *                 type: boolean
+ *               items:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required: [menuId, quantity]
+ *                   properties:
+ *                     menuId:
+ *                       type: string
+ *                     quantity:
+ *                       type: integer
  *     responses:
- *       200:
- *         description: Lista de pedidos
+ *       201:
+ *         description: Pedido creado
+ *       400:
+ *         description: Order must have at least one item
  */
-router.get(
-    "/",
-    keycloak.protect(),
-    attachUser,
-    controller.getAllOrders
-)
+router.post("/", keycloak.protect(), attachUser, controller.createOrder)
 
 /**
  * @swagger
@@ -110,7 +95,7 @@ router.get(
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
  *     requestBody:
  *       required: true
  *       content:
@@ -127,12 +112,7 @@ router.get(
  *       404:
  *         description: Order not found
  */
-router.put(
-    "/:id",
-    keycloak.protect(),
-    attachUser,
-    controller.updateOrder
-)
+router.put("/:id", keycloak.protect(), attachUser, controller.updateOrder)
 
 /**
  * @swagger
@@ -147,18 +127,13 @@ router.put(
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
  *     responses:
  *       200:
  *         description: Pedido eliminado
  *       404:
  *         description: Order not found
  */
-router.delete(
-    "/:id",
-    keycloak.protect(),
-    attachUser,
-    controller.deleteOrder
-)
+router.delete("/:id", keycloak.protect(), attachUser, controller.deleteOrder)
 
 module.exports = router

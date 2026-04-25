@@ -8,6 +8,20 @@ const controller = require("../controllers/menusController")
 
 /**
  * @swagger
+ * /menus:
+ *   get:
+ *     summary: Listar todos los menús
+ *     tags: [menus]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de menús
+ */
+router.get("/", keycloak.protect(), controller.getAllMenus)
+
+/**
+ * @swagger
  * /menus/{id}:
  *   get:
  *     summary: Obtener detalles de un menú específico
@@ -19,18 +33,14 @@ const controller = require("../controllers/menusController")
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
  *     responses:
  *       200:
  *         description: Datos del menú
  *       404:
  *         description: Menu not found
  */
-router.get(
-    "/:id",
-    keycloak.protect(),
-    controller.getMenuById
-)
+router.get("/:id", keycloak.protect(), controller.getMenuById)
 
 /**
  * @swagger
@@ -49,7 +59,7 @@ router.get(
  *             required: [restaurantId, name, price]
  *             properties:
  *               restaurantId:
- *                 type: integer
+ *                 type: string
  *               name:
  *                 type: string
  *               description:
@@ -62,12 +72,7 @@ router.get(
  *       403:
  *         description: Forbidden
  */
-router.post(
-    "/",
-    keycloak.protect(),
-    requireRole("admin"),
-    controller.createMenu
-)
+router.post("/", keycloak.protect(), requireRole("admin"), controller.createMenu)
 
 /**
  * @swagger
@@ -82,7 +87,7 @@ router.post(
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
  *     requestBody:
  *       required: true
  *       content:
@@ -102,12 +107,7 @@ router.post(
  *       404:
  *         description: Menu not found
  */
-router.put(
-    "/:id",
-    keycloak.protect(),
-    requireRole("admin"),
-    controller.updateMenu
-)
+router.put("/:id", keycloak.protect(), requireRole("admin"), controller.updateMenu)
 
 /**
  * @swagger
@@ -122,36 +122,13 @@ router.put(
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
  *     responses:
  *       200:
  *         description: Menú eliminado
  *       404:
  *         description: Menu not found
  */
-router.delete(
-    "/:id",
-    keycloak.protect(),
-    requireRole("admin"),
-    controller.deleteMenu
-)
-
-/**
- * @swagger
- * /menus:
- *   get:
- *     summary: Listar todos los menús
- *     tags: [menus]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Lista de menús
- */
-router.get(
-    "/",
-    keycloak.protect(),
-    controller.getAllMenus
-)
+router.delete("/:id", keycloak.protect(), requireRole("admin"), controller.deleteMenu)
 
 module.exports = router

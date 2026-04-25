@@ -1,8 +1,8 @@
-const menusModel = require("../models/menus")
+const menuService = require("../services/menuService")
 
 async function getMenus(req, res, next) {
     try {
-        const menus = await menusModel.getMenusByRestaurant(req.params.restaurantId)
+        const menus = await menuService.getByRestaurant(req.params.restaurantId)
         res.json(menus)
     } catch (error) {
         next(error)
@@ -11,7 +11,7 @@ async function getMenus(req, res, next) {
 
 async function getMenuById(req, res, next) {
     try {
-        const menu = await menusModel.getMenuById(req.params.id)
+        const menu = await menuService.getById(req.params.id)
         if (!menu) return res.status(404).json({ error: "Menu not found" })
         res.json(menu)
     } catch (error) {
@@ -27,7 +27,7 @@ async function createMenu(req, res, next) {
             return res.status(400).json({ error: "restaurantId is required" })
         }
 
-        const menu = await menusModel.createMenu({
+        const menu = await menuService.create({
             restaurantId,
             name,
             description,
@@ -42,11 +42,11 @@ async function createMenu(req, res, next) {
 
 async function updateMenu(req, res, next) {
     try {
-        const menu = await menusModel.getMenuById(req.params.id)
+        const menu = await menuService.getById(req.params.id)
         if (!menu) return res.status(404).json({ error: "Menu not found" })
 
         const { name, description, price } = req.body
-        const updated = await menusModel.updateMenu(req.params.id, { name, description, price })
+        const updated = await menuService.update(req.params.id, { name, description, price })
         res.json(updated)
     } catch (error) {
         next(error)
@@ -55,10 +55,10 @@ async function updateMenu(req, res, next) {
 
 async function deleteMenu(req, res, next) {
     try {
-        const menu = await menusModel.getMenuById(req.params.id)
+        const menu = await menuService.getById(req.params.id)
         if (!menu) return res.status(404).json({ error: "Menu not found" })
 
-        await menusModel.deleteMenu(req.params.id)
+        await menuService.delete(req.params.id)
         res.json({ message: "Menu deleted" })
     } catch (error) {
         next(error)
@@ -67,7 +67,7 @@ async function deleteMenu(req, res, next) {
 
 async function getAllMenus(req, res, next) {
     try {
-        const menus = await menusModel.getAllMenus()
+        const menus = await menuService.getAll()
         res.json(menus)
     } catch (error) {
         next(error)

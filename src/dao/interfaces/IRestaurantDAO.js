@@ -1,4 +1,4 @@
-class RestaurantDAO {
+class IRestaurantDAO {
   async getAll() {
     throw new Error("Method not implemented")
   }
@@ -20,4 +20,4 @@ class RestaurantDAO {
   }
 }
 
-module.exports = RestaurantDAO
+module.exports = IRestaurantDAO

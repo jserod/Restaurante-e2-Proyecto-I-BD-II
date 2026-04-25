@@ -68,8 +68,6 @@ router.get(
  *           schema:
  *             type: object
  *             properties:
- *               username:
- *                 type: string
  *               email:
  *                 type: string
  *               firstName:

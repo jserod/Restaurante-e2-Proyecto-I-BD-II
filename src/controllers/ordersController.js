@@ -1,4 +1,4 @@
-const ordersModel = require("../models/orders")
+const orderService = require("../services/orderService")
 
 async function createOrder(req, res, next) {
     try {
@@ -8,7 +8,7 @@ async function createOrder(req, res, next) {
             return res.status(400).json({ error: "Order must have at least one item" })
         }
 
-        const order = await ordersModel.createOrder({
+        const order = await orderService.create({
             userId: req.user.id,
             restaurantId,
             reservationId,
@@ -23,7 +23,7 @@ async function createOrder(req, res, next) {
 
 async function getOrderById(req, res, next) {
     try {
-        const order = await ordersModel.getOrderById(req.params.id)
+        const order = await orderService.getById(req.params.id)
         if (!order) return res.status(404).json({ error: "Order not found" })
         res.json(order)
     } catch (error) {
@@ -33,7 +33,7 @@ async function getOrderById(req, res, next) {
 
 async function getAllOrders(req, res, next) {
     try {
-        const orders = await ordersModel.getAllOrders()
+        const orders = await orderService.getAll()
         res.json(orders)
     } catch (error) {
         next(error)
@@ -42,11 +42,11 @@ async function getAllOrders(req, res, next) {
 
 async function updateOrder(req, res, next) {
     try {
-        const order = await ordersModel.getOrderById(req.params.id)
+        const order = await orderService.getById(req.params.id)
         if (!order) return res.status(404).json({ error: "Order not found" })
 
         const { status } = req.body
-        const updated = await ordersModel.updateOrder(req.params.id, { status })
+        const updated = await orderService.update(req.params.id, { status })
         res.json(updated)
     } catch (error) {
         next(error)
@@ -55,10 +55,10 @@ async function updateOrder(req, res, next) {
 
 async function deleteOrder(req, res, next) {
     try {
-        const order = await ordersModel.getOrderById(req.params.id)
+        const order = await orderService.getById(req.params.id)
         if (!order) return res.status(404).json({ error: "Order not found" })
 
-        await ordersModel.deleteOrder(req.params.id)
+        await orderService.delete(req.params.id)
         res.json({ message: "Order deleted" })
     } catch (error) {
         next(error)

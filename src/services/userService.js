@@ -1,8 +1,4 @@
 const DAOFactory = require("../dao/DAOFactory")
-
-
-//Probando playito
-
 const userDAO = DAOFactory.getUserDAO()
 
 async function findOrCreateUser({ keycloakId, email, name }) {
@@ -30,8 +26,8 @@ async function getUserById(id) {
   return userDAO.getUserById(id)
 }
 
-async function updateUser(id, data) {
-  return userDAO.updateUser(id, data)
+async function updateUser(keycloakId, data) {
+  return userDAO.updateUser(keycloakId, data)
 }
 
 async function deleteUser(id) {

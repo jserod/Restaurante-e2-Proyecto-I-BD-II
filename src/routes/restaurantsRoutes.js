@@ -19,12 +19,7 @@ const controller = require("../controllers/restaurantsController")
  *       200:
  *         description: Lista de restaurantes
  */
-router.get(
-    "/",
-    keycloak.protect(),
-    attachUser,
-    controller.getRestaurants
-)
+router.get("/", keycloak.protect(), attachUser, controller.getRestaurants)
 
 /**
  * @swagger
@@ -39,19 +34,14 @@ router.get(
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
  *     responses:
  *       200:
  *         description: Datos del restaurante
  *       404:
  *         description: Restaurant not found
  */
-router.get(
-    "/:id",
-    keycloak.protect(),
-    attachUser,
-    controller.getRestaurantById
-)
+router.get("/:id", keycloak.protect(), attachUser, controller.getRestaurantById)
 
 /**
  * @swagger
@@ -81,13 +71,7 @@ router.get(
  *       403:
  *         description: Forbidden
  */
-router.post(
-    "/",
-    keycloak.protect(),
-    attachUser,
-    requireRole("admin"),
-    controller.createRestaurant
-)
+router.post("/", keycloak.protect(), attachUser, requireRole("admin"), controller.createRestaurant)
 
 /**
  * @swagger
@@ -102,7 +86,7 @@ router.post(
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
  *     requestBody:
  *       required: true
  *       content:
@@ -122,13 +106,7 @@ router.post(
  *       404:
  *         description: Restaurant not found
  */
-router.put(
-    "/:id",
-    keycloak.protect(),
-    attachUser,
-    requireRole("admin"),
-    controller.updateRestaurant
-)
+router.put("/:id", keycloak.protect(), attachUser, requireRole("admin"), controller.updateRestaurant)
 
 /**
  * @swagger
@@ -143,19 +121,13 @@ router.put(
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
  *     responses:
  *       200:
  *         description: Restaurante eliminado
  *       404:
  *         description: Restaurant not found
  */
-router.delete(
-    "/:id",
-    keycloak.protect(),
-    attachUser,
-    requireRole("admin"),
-    controller.deleteRestaurant
-)
+router.delete("/:id", keycloak.protect(), attachUser, requireRole("admin"), controller.deleteRestaurant)
 
 module.exports = router

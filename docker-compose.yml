@@ -20,6 +20,15 @@ services:
       timeout: 5s
       retries: 5
 
+  mongo:
+    image: mongo:7
+    container_name: mongo-db
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
   keycloak:
     image: quay.io/keycloak/keycloak:26.5.5
     container_name: keycloak
@@ -41,14 +50,19 @@ services:
     env_file:
       - .env
     environment:
-      DB_HOST: postgres
+      DB_HOST: ${DB_HOST}
+      DB_TYPE: ${DB_TYPE}
       KEYCLOAK_URL: http://host.docker.internal:8080
       DEBUG: keycloak:*
+      MONGO_URI: mongodb://mongo:27017
+      MONGO_DB_NAME: restaurant
     ports:
       - "${PORT}:3000"
     depends_on:
       postgres:
         condition: service_healthy
+      mongo:
+        condition: service_started
       keycloak:
         condition: service_started
     volumes:
@@ -57,3 +71,4 @@ services:
 
 volumes:
   postgres_data:
+  mongo_data:
