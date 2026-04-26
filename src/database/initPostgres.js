@@ -32,6 +32,7 @@ async function initPostgres() {
                 name VARCHAR(150) NOT NULL,
                 description TEXT,
                 price NUMERIC(10,2) NOT NULL,
+                category VARCHAR(100) DEFAULT 'general',
                 created_at TIMESTAMP DEFAULT NOW()
             );
 
