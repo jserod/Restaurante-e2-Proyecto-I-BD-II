@@ -12,7 +12,7 @@ async function initMongo() {
     )
 
     await db.collection("users").createIndex(
-        { email: 1 },
+        { keycloak_id: 1, email: 1 },
         { unique: true }
     )
 

@@ -1,7 +1,8 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
-
 services:
 
+  # =========================
+  # POSTGRES
+  # =========================
   postgres:
     image: postgres:15.6
     container_name: restaurant-db
@@ -20,19 +21,91 @@ services:
       timeout: 5s
       retries: 5
 
-  mongo:
+  # =========================
+  # CONFIG SERVERS
+  # =========================
+  mongo-config1:
     image: mongo:7
-    container_name: mongo-db
-    restart: always
+    container_name: mongo-config1
+    command: mongod --configsvr --replSet configReplSet --port 27019 --bind_ip_all --quiet
+    volumes:
+      - config1_data:/data/db
+
+  mongo-config2:
+    image: mongo:7
+    container_name: mongo-config2
+    command: mongod --configsvr --replSet configReplSet --port 27019 --bind_ip_all --quiet
+    volumes:
+      - config2_data:/data/db
+
+  mongo-config3:
+    image: mongo:7
+    container_name: mongo-config3
+    command: mongod --configsvr --replSet configReplSet --port 27019 --bind_ip_all --quiet
+    volumes:
+      - config3_data:/data/db
+
+  # =========================
+  # SHARD 1
+  # =========================
+  mongo-shard1-a:
+    image: mongo:7
+    container_name: mongo-shard1-a
+    command: mongod --shardsvr --replSet shard1ReplSet --port 27018 --bind_ip_all --quiet
+    volumes:
+      - shard1a_data:/data/db
+
+  mongo-shard1-b:
+    image: mongo:7
+    container_name: mongo-shard1-b
+    command: mongod --shardsvr --replSet shard1ReplSet --port 27018 --bind_ip_all --quiet
+    volumes:
+      - shard1b_data:/data/db
+
+  mongo-shard1-c:
+    image: mongo:7
+    container_name: mongo-shard1-c
+    command: mongod --shardsvr --replSet shard1ReplSet --port 27018 --bind_ip_all --quiet
+    volumes:
+      - shard1c_data:/data/db
+
+  # =========================
+  # ROUTER (mongos)
+  # =========================
+  mongo-router:
+    image: mongo:7
+    container_name: mongo-router
+    command: mongos --configdb configReplSet/mongo-config1:27019,mongo-config2:27019,mongo-config3:27019 --port 27017 --bind_ip_all
     ports:
       - "27017:27017"
-    volumes:
-      - mongo_data:/data/db
+    depends_on:
+      - mongo-config1
+      - mongo-config2
+      - mongo-config3
+      - mongo-shard1-a
+      - mongo-shard1-b
+      - mongo-shard1-c
 
+  # =========================
+  # INIT MONGO (corre una sola vez)
+  # =========================
+  mongo-init:
+    image: mongo:7
+    container_name: mongo-init
+    depends_on:
+      - mongo-router
+    restart: "no"
+    volumes:
+      - ./mongo/init.sh:/init.sh:ro
+    entrypoint: ["sh", "-c", "cp /init.sh /tmp/init.sh && sed -i 's/\\r//' /tmp/init.sh && bash /tmp/init.sh"]
+
+  # =========================
+  # KEYCLOAK
+  # =========================
   keycloak:
     image: quay.io/keycloak/keycloak:26.5.5
     container_name: keycloak
-    command:  start-dev --import-realm --hostname=localhost --hostname-strict=false
+    command: start-dev --import-realm --hostname=localhost --hostname-strict=false
     environment:
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
@@ -43,6 +116,9 @@ services:
     volumes:
       - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json
 
+  # =========================
+  # API
+  # =========================
   api:
     build: .
     container_name: restaurant-api
@@ -50,19 +126,18 @@ services:
     env_file:
       - .env
     environment:
-      DB_HOST: ${DB_HOST}
+      DB_HOST: postgres
       DB_TYPE: ${DB_TYPE}
       KEYCLOAK_URL: http://host.docker.internal:8080
-      DEBUG: keycloak:*
-      MONGO_URI: mongodb://mongo:27017
-      MONGO_DB_NAME: restaurant
+      MONGO_URI: mongodb://mongo-router:27017
+      MONGO_DB_NAME: ${MONGO_DB_NAME}
     ports:
       - "${PORT}:3000"
     depends_on:
       postgres:
         condition: service_healthy
-      mongo:
-        condition: service_started
+      mongo-init:
+        condition: service_completed_successfully
       keycloak:
         condition: service_started
     volumes:
@@ -71,4 +146,9 @@ services:
 
 volumes:
   postgres_data:
-  mongo_data:
+  config1_data:
+  config2_data:
+  config3_data:
+  shard1a_data:
+  shard1b_data:
+  shard1c_data:

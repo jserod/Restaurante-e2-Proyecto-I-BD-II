@@ -7,15 +7,6 @@ const DB_TYPE = process.env.DB_TYPE || "postgres"
 
 console.log("DB_TYPE:", process.env.DB_TYPE)
 
-async function connectDB() {
-    try {
-        const res = await pool.query("SELECT NOW()")
-        console.log("Database connected:", res.rows[0])
-    } catch (err) {
-        console.error("DB connection error:", err.message)
-    }
-}
-
 async function startServer() {
     try {
         if (DB_TYPE === "postgres") {
@@ -39,5 +30,4 @@ async function startServer() {
     }
 }
 
-connectDB()
 startServer()
