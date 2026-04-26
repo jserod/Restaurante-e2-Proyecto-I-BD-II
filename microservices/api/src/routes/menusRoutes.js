@@ -66,6 +66,8 @@ router.get("/:id", keycloak.protect(), controller.getMenuById)
  *                 type: string
  *               price:
  *                 type: number
+ *               category:
+ *                 type: string
  *     responses:
  *       201:
  *         description: Menú creado
@@ -101,6 +103,8 @@ router.post("/", keycloak.protect(), requireRole("admin"), controller.createMenu
  *                 type: string
  *               price:
  *                 type: number
+ *               category:
+ *                 type: string
  *     responses:
  *       200:
  *         description: Menú actualizado

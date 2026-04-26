@@ -21,7 +21,7 @@ async function getMenuById(req, res, next) {
 
 async function createMenu(req, res, next) {
     try {
-        const { restaurantId, name, description, price } = req.body
+        const { restaurantId, name, description, price, category } = req.body
 
         if (!restaurantId) {
             return res.status(400).json({ error: "restaurantId is required" })
@@ -31,7 +31,8 @@ async function createMenu(req, res, next) {
             restaurantId,
             name,
             description,
-            price
+            price,
+            category
         })
 
         res.status(201).json(menu)
@@ -45,8 +46,8 @@ async function updateMenu(req, res, next) {
         const menu = await menuService.getById(req.params.id)
         if (!menu) return res.status(404).json({ error: "Menu not found" })
 
-        const { name, description, price } = req.body
-        const updated = await menuService.update(req.params.id, { name, description, price })
+        const { name, description, price, category } = req.body
+        const updated = await menuService.update(req.params.id, { name, description, price, category })
         res.json(updated)
     } catch (error) {
         next(error)

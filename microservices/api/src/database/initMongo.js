@@ -6,7 +6,7 @@ async function initMongo() {
     console.log("Initializing MongoDB...")
 
     await db.collection("users").createIndex({ keycloak_id: 1 }, { unique: true })
-    await db.collection("users").createIndex({ email: 1 }, { unique: true })
+    await db.collection("users").createIndex({ email: 1 })
 
     await db.collection("restaurants").createIndex({ name: 1 })
 

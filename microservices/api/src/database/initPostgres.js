@@ -90,4 +90,4 @@ async function initPostgres() {
     }
 }
 
-module.exports = initDatabase
+module.exports = initPostgres

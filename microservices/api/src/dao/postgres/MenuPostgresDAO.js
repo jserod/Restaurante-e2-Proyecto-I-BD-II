@@ -5,7 +5,7 @@ class MenuPostgresDAO extends IMenuDAO {
 
   async getAll() {
     const result = await pool.query(
-      `SELECT id, restaurant_id, name, description, price
+      `SELECT id, restaurant_id, name, description, price, category
        FROM menus
        ORDER BY id`
     )
@@ -14,7 +14,7 @@ class MenuPostgresDAO extends IMenuDAO {
 
   async getById(id) {
     const result = await pool.query(
-      `SELECT id, restaurant_id, name, description, price
+      `SELECT id, restaurant_id, name, description, price, category
        FROM menus
        WHERE id = $1`,
       [id]
@@ -24,7 +24,7 @@ class MenuPostgresDAO extends IMenuDAO {
 
   async getByRestaurant(restaurantId) {
     const result = await pool.query(
-      `SELECT id, restaurant_id, name, description, price
+      `SELECT id, restaurant_id, name, description, price, category
        FROM menus
        WHERE restaurant_id = $1
        ORDER BY id`,
@@ -33,12 +33,12 @@ class MenuPostgresDAO extends IMenuDAO {
     return result.rows
   }
 
-  async create({ restaurantId, name, description, price }) {
+  async create({ restaurantId, name, description, price, category }) {
     const result = await pool.query(
-      `INSERT INTO menus (restaurant_id, name, description, price)
-       VALUES ($1, $2, $3, $4)
-       RETURNING id, restaurant_id, name, description, price`,
-      [restaurantId, name, description, price]
+      `INSERT INTO menus (restaurant_id, name, description, price, category)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id, restaurant_id, name, description, price, category`,
+      [restaurantId, name, description, price, category || "general"]
     )
     return result.rows[0]
   }
@@ -63,6 +63,11 @@ class MenuPostgresDAO extends IMenuDAO {
       values.push(data.price)
     }
 
+    if (data.category !== undefined) {
+      fields.push(`category = $${i++}`)
+      values.push(data.category)
+    }
+
     if (fields.length === 0) {
       throw new Error("No fields to update")
     }
@@ -73,7 +78,7 @@ class MenuPostgresDAO extends IMenuDAO {
       `UPDATE menus
        SET ${fields.join(", ")}
        WHERE id = $${i}
-       RETURNING id, restaurant_id, name, description, price`,
+       RETURNING id, restaurant_id, name, description, price, category`,
       values
     )
 

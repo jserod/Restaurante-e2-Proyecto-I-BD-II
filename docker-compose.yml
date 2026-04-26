@@ -75,7 +75,7 @@ services:
   mongo-router:
     image: mongo:7
     container_name: mongo-router
-    command: mongos --configdb configReplSet/mongo-config1:27019,mongo-config2:27019,mongo-config3:27019 --port 27017 --bind_ip_all
+    command: mongos --configdb configReplSet/mongo-config1:27019,mongo-config2:27019,mongo-config3:27019 --port 27017 --bind_ip_all --quiet
     ports:
       - "27017:27017"
     depends_on:
@@ -120,7 +120,7 @@ services:
   # API
   # =========================
   api:
-    build: .
+    build: ./microservices/api
     container_name: restaurant-api
     restart: always
     env_file:
@@ -141,7 +141,52 @@ services:
       keycloak:
         condition: service_started
     volumes:
-      - .:/app
+      - ./microservices/api:/app
+      - /app/node_modules
+
+  # =========================
+  # ELASTICSEARCH
+  # =========================
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    volumes:
+      - elastic_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+
+  # =========================
+  # SEARCH SERVICE
+  # =========================
+  search-service:
+    build: ./microservices/search
+    container_name: search-service
+    restart: always
+    env_file:
+      - .env
+    environment:
+      ELASTIC_URL: http://elasticsearch:9200
+      SEARCH_PORT: 3001
+      DB_TYPE: ${DB_TYPE}
+      MONGO_URI: mongodb://mongo-router:27017
+      MONGO_DB_NAME: ${MONGO_DB_NAME}
+      DB_HOST: postgres
+    ports:
+      - "3001:3001"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    volumes:
+      - ./microservices/search:/app
       - /app/node_modules
 
 volumes:
@@ -152,3 +197,4 @@ volumes:
   shard1a_data:
   shard1b_data:
   shard1c_data:
+  elastic_data:

@@ -1,5 +1,3 @@
-// const UserMongoDAO = require("./mongo/UserMongoDAO");
-
 const DB_TYPE = process.env.DB_TYPE || "postgres";
 
 class DAOFactory {
