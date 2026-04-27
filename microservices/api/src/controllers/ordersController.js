@@ -5,7 +5,7 @@ async function createOrder(req, res, next) {
         const { restaurantId, reservationId, pickup, items } = req.body
 
         if (!items || items.length === 0) {
-            return res.status(400).json({ error: "Order must have at least one item" })
+            throw new BadRequestError("Order must have at least one item")
         }
 
         const order = await orderService.create({
@@ -23,8 +23,7 @@ async function createOrder(req, res, next) {
 
 async function getOrderById(req, res, next) {
     try {
-        const order = await orderService.getById(req.params.id)
-        if (!order) return res.status(404).json({ error: "Order not found" })
+        const order = await orderService.getById(req.params.id) // lanza NotFound si no existe
         res.json(order)
     } catch (error) {
         next(error)
@@ -42,9 +41,6 @@ async function getAllOrders(req, res, next) {
 
 async function updateOrder(req, res, next) {
     try {
-        const order = await orderService.getById(req.params.id)
-        if (!order) return res.status(404).json({ error: "Order not found" })
-
         const { status } = req.body
         const updated = await orderService.update(req.params.id, { status })
         res.json(updated)
@@ -55,9 +51,6 @@ async function updateOrder(req, res, next) {
 
 async function deleteOrder(req, res, next) {
     try {
-        const order = await orderService.getById(req.params.id)
-        if (!order) return res.status(404).json({ error: "Order not found" })
-
         await orderService.delete(req.params.id)
         res.json({ message: "Order deleted" })
     } catch (error) {
@@ -66,9 +59,9 @@ async function deleteOrder(req, res, next) {
 }
 
 module.exports = {
-    getAllOrders,
     createOrder,
     getOrderById,
+    getAllOrders,
     updateOrder,
     deleteOrder
 }

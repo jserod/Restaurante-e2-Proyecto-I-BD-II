@@ -1,7 +1,7 @@
 const express = require("express")
 const router = express.Router()
 
-const { keycloak } = require("../config/keycloak")
+const protect = require("../middlewares/keycloakProtect")
 const attachUser = require("../middlewares/attachUser")
 
 const controller = require("../controllers/ordersController")
@@ -17,8 +17,10 @@ const controller = require("../controllers/ordersController")
  *     responses:
  *       200:
  *         description: Lista de pedidos
+ *       401:
+ *         description: No autorizado
  */
-router.get("/", keycloak.protect(), attachUser, controller.getAllOrders)
+router.get("/", protect(), attachUser, controller.getAllOrders)
 
 /**
  * @swagger
@@ -37,10 +39,12 @@ router.get("/", keycloak.protect(), attachUser, controller.getAllOrders)
  *     responses:
  *       200:
  *         description: Datos del pedido
+ *       401:
+ *         description: No autorizado
  *       404:
- *         description: Order not found
+ *         description: Pedido no encontrado
  */
-router.get("/:id", keycloak.protect(), attachUser, controller.getOrderById)
+router.get("/:id", protect(), attachUser, controller.getOrderById)
 
 /**
  * @swagger
@@ -78,9 +82,11 @@ router.get("/:id", keycloak.protect(), attachUser, controller.getOrderById)
  *       201:
  *         description: Pedido creado
  *       400:
- *         description: Order must have at least one item
+ *         description: El pedido debe tener al menos un item
+ *       401:
+ *         description: No autorizado
  */
-router.post("/", keycloak.protect(), attachUser, controller.createOrder)
+router.post("/", protect(), attachUser, controller.createOrder)
 
 /**
  * @swagger
@@ -109,10 +115,12 @@ router.post("/", keycloak.protect(), attachUser, controller.createOrder)
  *     responses:
  *       200:
  *         description: Pedido actualizado
+ *       401:
+ *         description: No autorizado
  *       404:
- *         description: Order not found
+ *         description: Pedido no encontrado
  */
-router.put("/:id", keycloak.protect(), attachUser, controller.updateOrder)
+router.put("/:id", protect(), attachUser, controller.updateOrder)
 
 /**
  * @swagger
@@ -131,9 +139,11 @@ router.put("/:id", keycloak.protect(), attachUser, controller.updateOrder)
  *     responses:
  *       200:
  *         description: Pedido eliminado
+ *       401:
+ *         description: No autorizado
  *       404:
- *         description: Order not found
+ *         description: Pedido no encontrado
  */
-router.delete("/:id", keycloak.protect(), attachUser, controller.deleteOrder)
+router.delete("/:id", protect(), attachUser, controller.deleteOrder)
 
 module.exports = router

@@ -4,6 +4,18 @@ const controller = require("./searchController")
 
 /**
  * @openapi
+ * /search/reindex:
+ *   post:
+ *     summary: Reindexar todos los productos
+ *     description: Carga todos los datos desde la base de datos y los indexa en ElasticSearch
+ *     responses:
+ *       200:
+ *         description: Resultado del proceso de indexación
+ */
+router.post("/reindex", controller.reindex)
+
+/**
+ * @openapi
  * /search/products:
  *   get:
  *     summary: Buscar productos por texto
@@ -37,17 +49,5 @@ router.get("/products", controller.searchByText)
  *         description: Lista de productos filtrados
  */
 router.get("/products/category/:categoria", controller.searchByCategory)
-
-/**
- * @openapi
- * /search/reindex:
- *   post:
- *     summary: Reindexar todos los productos
- *     description: Carga todos los datos desde la base de datos y los indexa en ElasticSearch
- *     responses:
- *       200:
- *         description: Resultado del proceso de indexación
- */
-router.post("/reindex", controller.reindex)
 
 module.exports = router

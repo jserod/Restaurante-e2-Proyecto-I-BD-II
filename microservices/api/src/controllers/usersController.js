@@ -1,60 +1,9 @@
-const http = require("http")
+const keycloakService = require("../services/keycloakService")
 const userService = require("../services/userService")
-
-const KEYCLOAK_URL = process.env.KEYCLOAK_URL
-const REALM = process.env.KEYCLOAK_REALM
-const ADMIN_USER = process.env.KEYCLOAK_ADMIN
-const ADMIN_PASSWORD = process.env.KEYCLOAK_ADMIN_PASSWORD
-
-function fetchRequest(method, url, body, headers = {}) {
-  return new Promise((resolve, reject) => {
-    const bodyStr = body ? (typeof body === "string" ? body : JSON.stringify(body)) : null
-    const urlObj = new URL(url)
-
-    const options = {
-      hostname: urlObj.hostname,
-      port: urlObj.port || 80,
-      path: urlObj.pathname + (urlObj.search || ""),
-      method,
-      headers: {
-        ...(bodyStr ? { "Content-Length": Buffer.byteLength(bodyStr) } : {}),
-        ...headers
-      }
-    }
-
-    const req = http.request(options, res => {
-      let data = ""
-      res.on("data", chunk => data += chunk)
-      res.on("end", () => resolve({ status: res.statusCode, body: data }))
-    })
-
-    req.on("error", reject)
-    if (bodyStr) req.write(bodyStr)
-    req.end()
-  })
-}
-
-async function getAdminToken() {
-  const body = `grant_type=password&client_id=admin-cli&username=${ADMIN_USER}&password=${ADMIN_PASSWORD}`
-  const res = await fetchRequest(
-    "POST",
-    `${KEYCLOAK_URL}/realms/master/protocol/openid-connect/token`,
-    body,
-    { "Content-Type": "application/x-www-form-urlencoded" }
-  )
-  return JSON.parse(res.body).access_token
-}
 
 async function getUsers(req, res, next) {
   try {
-    const adminToken = await getAdminToken()
-    const response = await fetchRequest(
-      "GET",
-      `${KEYCLOAK_URL}/admin/realms/${REALM}/users`,
-      null,
-      { "Authorization": `Bearer ${adminToken}` }
-    )
-    const users = JSON.parse(response.body)
+    const users = await keycloakService.getAllKeycloakUsers()
     res.json(users.map(u => ({
       id: u.id,
       username: u.username,
@@ -82,40 +31,28 @@ async function getMe(req, res, next) {
 
 async function updateUser(req, res, next) {
   try {
-    const adminToken = await getAdminToken()
     const { email, firstName, lastName } = req.body
 
-    const payload = {}
-    if (email) payload.email = email
-    if (firstName) payload.firstName = firstName
-    if (lastName) payload.lastName = lastName
+    const keycloakPayload = {}
+    if (email) keycloakPayload.email = email
+    if (firstName) keycloakPayload.firstName = firstName
+    if (lastName) keycloakPayload.lastName = lastName
 
-    const response = await fetchRequest(
-      "PUT",
-      `${KEYCLOAK_URL}/admin/realms/${REALM}/users/${req.params.id}`,
-      JSON.stringify(payload),
-      {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${adminToken}`
-      }
-    )
-
-    if (response.status === 404) {
-      return res.status(404).json({ error: "User not found" })
+    // Si no hay nada que actualizar
+    if (Object.keys(keycloakPayload).length === 0) {
+      return res.status(400).json({ error: "No valid fields to update" })
     }
 
-    if (response.status !== 204) {
-      throw new Error(`Keycloak error: ${response.status} - ${response.body}`)
-    }
+    // Actualiza en Keycloak (lanza error si falla)
+    await keycloakService.updateKeycloakUser(req.params.id, keycloakPayload)
 
-    // sincronizar DB
+    // Actualiza en BD local (lanza error si no existe)
     await userService.updateUser(req.params.id, {
       email,
-      name: `${firstName ?? ""} ${lastName ?? ""}`.trim()
+      name: [firstName, lastName].filter(Boolean).join(" ") || undefined
     })
 
     res.json({ message: "User updated" })
-
   } catch (error) {
     next(error)
   }
@@ -123,18 +60,11 @@ async function updateUser(req, res, next) {
 
 async function deleteUser(req, res, next) {
   try {
-    const adminToken = await getAdminToken()
+    // Elimina de Keycloak (lanza error si falla)
+    await keycloakService.deleteKeycloakUser(req.params.id)
 
-    const response = await fetchRequest(
-      "DELETE",
-      `${KEYCLOAK_URL}/admin/realms/${REALM}/users/${req.params.id}`,
-      null,
-      { "Authorization": `Bearer ${adminToken}` }
-    )
-
-    if (response.status === 404) {
-      return res.status(404).json({ error: "User not found" })
-    }
+    // Elimina de BD local (lanza error si no existe)
+    await userService.deleteUser(req.params.id)
 
     res.json({ message: "User deleted" })
   } catch (error) {

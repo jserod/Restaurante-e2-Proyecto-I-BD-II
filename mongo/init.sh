@@ -1,11 +1,47 @@
 #!/bin/bash
 set -e
 
-echo "Esperando que los config servers estén listos..."
-sleep 15
+echo "========================================="
+echo "  MongoDB Sharded Cluster Initialization"
+echo "========================================="
 
-echo "Iniciando replica set de config servers..."
-mongosh --host mongo-config1 --port 27019 <<EOF
+# -------------------------------------------------
+# Función: espera hasta que un MongoDB responda
+# -------------------------------------------------
+wait_mongo() {
+    local host=$1
+    local port=$2
+    local label=${3:-"$host:$port"}
+    local max=40
+    local i=1
+
+    echo "  Esperando $label..."
+    until mongosh --host "$host" --port "$port" --eval "db.version()" --quiet &>/dev/null; do
+        if [ $i -ge $max ]; then
+            echo "  ERROR: $label no respondió después de ${max} intentos"
+            exit 1
+        fi
+        sleep 2
+        ((i++))
+    done
+    echo "  ✓ $label listo"
+}
+
+# -------------------------------------------------
+# 1. Esperar config servers
+# -------------------------------------------------
+echo ""
+echo "[1/5] Esperando config servers..."
+wait_mongo mongo-config1 27019 "mongo-config1:27019"
+wait_mongo mongo-config2 27019 "mongo-config2:27019"
+wait_mongo mongo-config3 27019 "mongo-config3:27019"
+
+# -------------------------------------------------
+# 2. Iniciar replica set de config
+# -------------------------------------------------
+echo ""
+echo "[2/5] Inicializando Config Replica Set..."
+mongosh --host mongo-config1 --port 27019 --quiet <<EOF
 rs.initiate({
   _id: "configReplSet",
   configsvr: true,
@@ -17,11 +53,31 @@ rs.initiate({
 })
 EOF
 
-echo "Esperando que el config replica set esté listo..."
-sleep 10
+# Esperar a que el config tenga un PRIMARY
+echo "  Esperando que configReplSet tenga PRIMARY..."
+until mongosh --host mongo-config1 --port 27019 --eval "
+    var status = rs.status();
+    if (status.myState === 1) quit(0); else quit(1);
+" --quiet 2>/dev/null; do
+    sleep 3
+done
+echo "  ✓ Config Replica Set tiene PRIMARY"
 
-echo "Iniciando replica set del shard 1..."
-mongosh --host mongo-shard1-a --port 27018 <<EOF
+# -------------------------------------------------
+# 3. Esperar shard servers
+# -------------------------------------------------
+echo ""
+echo "[3/5] Esperando shard servers..."
+wait_mongo mongo-shard1-a 27018 "mongo-shard1-a:27018"
+wait_mongo mongo-shard1-b 27018 "mongo-shard1-b:27018"
+wait_mongo mongo-shard1-c 27018 "mongo-shard1-c:27018"
+
+# -------------------------------------------------
+# 4. Iniciar replica set de shard
+# -------------------------------------------------
+echo ""
+echo "[4/5] Inicializando Shard Replica Set..."
+mongosh --host mongo-shard1-a --port 27018 --quiet <<EOF
 rs.initiate({
   _id: "shard1ReplSet",
   members: [
@@ -32,19 +88,33 @@ rs.initiate({
 })
 EOF
 
-echo "Esperando que el shard replica set esté listo..."
-sleep 10
+# Esperar a que el shard tenga un PRIMARY
+echo "  Esperando que shard1ReplSet tenga PRIMARY..."
+until mongosh --host mongo-shard1-a --port 27018 --eval "
+    var status = rs.status();
+    if (status.myState === 1) quit(0); else quit(1);
+" --quiet 2>/dev/null; do
+    sleep 3
+done
+echo "  ✓ Shard Replica Set tiene PRIMARY"
 
-echo "Esperando que el router esté listo..."
-sleep 10
+# -------------------------------------------------
+# 5. Esperar router y agregar shard
+# -------------------------------------------------
+echo ""
+echo "[5/5] Esperando router y configurando sharding..."
+wait_mongo mongo-router 27017 "mongo-router:27017"
 
-echo "Agregando shard al router..."
-mongosh --host mongo-router --port 27017 <<EOF
+# Agregar el shard
+echo "  Agregando shard al router..."
+mongosh --host mongo-router --port 27017 --quiet <<EOF
 sh.addShard("shard1ReplSet/mongo-shard1-a:27018,mongo-shard1-b:27018,mongo-shard1-c:27018")
 EOF
+echo "  ✓ Shard agregado"
 
-echo "Habilitando sharding en la base de datos restaurant..."
-mongosh --host mongo-router --port 27017 <<EOF
+# Habilitar sharding y shardear colecciones
+echo "  Habilitando sharding en 'restaurant'..."
+mongosh --host mongo-router --port 27017 --quiet <<EOF
 sh.enableSharding("restaurant")
 
 sh.shardCollection("restaurant.menus", { "restaurant_id": "hashed" })
@@ -53,5 +123,9 @@ sh.shardCollection("restaurant.orders", { "user_id": "hashed" })
 sh.shardCollection("restaurant.restaurants", { "_id": "hashed" })
 sh.shardCollection("restaurant.users", { "keycloak_id": "hashed" })
 EOF
+echo "  ✓ Sharding habilitado y colecciones shardeadas"
 
-echo "MongoDB sharding configurado correctamente"
+echo ""
+echo "========================================="
+echo "  MongoDB Sharded Cluster Listo"
+echo "========================================="

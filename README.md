@@ -45,7 +45,7 @@ KEYCLOAK_CLIENT_SECRET=client-secret
 ### 2. Levantar los servicios con Docker
 
 ```bash
-docker compose up --build
+docker compose up
 ```
 
 Esto levanta los contenedores de PostgreSQL, Keycloak y Rest API.
@@ -61,7 +61,7 @@ Una vez que Keycloak esté corriendo en `http://localhost:8080`:
 
 ### 4. Acceder a Swagger
 
-Una vez esten lo contenedores activos entra en `http://localhost:3000/api-docs`:
+Una vez esten lo contenedores activos entra en `http://localhost:3000/api/docs`:
 
 En Swagger se mostraran todos los endpoint y podras interactuar con ellos
 1. Entrar a /auth/register y agregar los datos del json para crear un usuario en keycloak 

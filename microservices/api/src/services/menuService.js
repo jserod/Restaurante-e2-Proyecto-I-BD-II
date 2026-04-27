@@ -1,14 +1,18 @@
 const DAOFactory = require("../dao/DAOFactory")
 const menuDAO = DAOFactory.getMenuDAO()
+const { NotFoundError } = require("../errors")
 
 class MenuService {
-
     async getAll() {
         return await menuDAO.getAll()
     }
 
     async getById(id) {
-        return await menuDAO.getById(id)
+        const menu = await menuDAO.getById(id)
+        if (!menu) {
+            throw new NotFoundError("Menu not found")
+        }
+        return menu
     }
 
     async getByRestaurant(restaurantId) {
@@ -20,11 +24,14 @@ class MenuService {
     }
 
     async update(id, data) {
+        const menu = await this.getById(id)
         return await menuDAO.update(id, data)
     }
 
     async delete(id) {
-        return await menuDAO.delete(id)
+        const menu = await this.getById(id)
+        await menuDAO.delete(id)
+        return menu
     }
 }
 

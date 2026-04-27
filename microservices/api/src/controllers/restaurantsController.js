@@ -1,4 +1,5 @@
-const restaurantService  = require("../services/restaurantService")
+const restaurantService = require("../services/restaurantService")
+const { BadRequestError } = require("../errors")
 
 async function getRestaurants(req, res, next) {
     try {
@@ -11,8 +12,7 @@ async function getRestaurants(req, res, next) {
 
 async function getRestaurantById(req, res, next) {
     try {
-        const restaurant = await restaurantService.getById(req.params.id)
-        if (!restaurant) return res.status(404).json({ error: "Restaurant not found" })
+        const restaurant = await restaurantService.getById(req.params.id) // lanza NotFound si no existe
         res.json(restaurant)
     } catch (error) {
         next(error)
@@ -21,12 +21,10 @@ async function getRestaurantById(req, res, next) {
 
 async function createRestaurant(req, res, next) {
     try {
-        const { name, description, address } = req.body
-        const restaurant = await restaurantService.create({
-            name,
-            description,
-            address
-        })
+        if (!req.body.name) {
+            throw new BadRequestError("Name is required")
+        }
+        const restaurant = await restaurantService.create(req.body)
         res.status(201).json(restaurant)
     } catch (error) {
         next(error)
@@ -35,14 +33,7 @@ async function createRestaurant(req, res, next) {
 
 async function updateRestaurant(req, res, next) {
     try {
-        const restaurant = await restaurantService.getById(req.params.id)
-        if (!restaurant) return res.status(404).json({ error: "Restaurant not found" })
-
-        const { name, description, address } = req.body
-        const updated = await restaurantService.update(
-            req.params.id,
-            { name, description, address }  // corregido: ahora pasa objeto completo
-        )
+        const updated = await restaurantService.update(req.params.id, req.body)
         res.json(updated)
     } catch (error) {
         next(error)
@@ -51,9 +42,6 @@ async function updateRestaurant(req, res, next) {
 
 async function deleteRestaurant(req, res, next) {
     try {
-        const restaurant = await restaurantService.getById(req.params.id)
-        if (!restaurant) return res.status(404).json({ error: "Restaurant not found" })
-
         await restaurantService.delete(req.params.id)
         res.json({ message: "Restaurant deleted" })
     } catch (error) {

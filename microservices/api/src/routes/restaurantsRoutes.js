@@ -1,7 +1,7 @@
 const express = require("express")
 const router = express.Router()
 
-const { keycloak } = require("../config/keycloak")
+const protect = require("../middlewares/keycloakProtect")
 const requireRole = require("../middlewares/requireRole")
 const attachUser = require("../middlewares/attachUser")
 
@@ -18,8 +18,10 @@ const controller = require("../controllers/restaurantsController")
  *     responses:
  *       200:
  *         description: Lista de restaurantes
+ *       401:
+ *         description: No autorizado
  */
-router.get("/", keycloak.protect(), attachUser, controller.getRestaurants)
+router.get("/", protect(), attachUser, controller.getRestaurants)
 
 /**
  * @swagger
@@ -39,15 +41,15 @@ router.get("/", keycloak.protect(), attachUser, controller.getRestaurants)
  *       200:
  *         description: Datos del restaurante
  *       404:
- *         description: Restaurant not found
+ *         description: Restaurante no encontrado
  */
-router.get("/:id", keycloak.protect(), attachUser, controller.getRestaurantById)
+router.get("/:id", protect(), attachUser, controller.getRestaurantById)
 
 /**
  * @swagger
  * /restaurants:
  *   post:
- *     summary: Registrar un restaurante (solo administradores)
+ *     summary: Registrar un restaurante (solo admin)
  *     tags: [restaurants]
  *     security:
  *       - bearerAuth: []
@@ -68,16 +70,20 @@ router.get("/:id", keycloak.protect(), attachUser, controller.getRestaurantById)
  *     responses:
  *       201:
  *         description: Restaurante creado
+ *       400:
+ *         description: Faltan campos requeridos (name)
+ *       401:
+ *         description: No autorizado
  *       403:
- *         description: Forbidden
+ *         description: No tiene permisos de administrador
  */
-router.post("/", keycloak.protect(), attachUser, requireRole("admin"), controller.createRestaurant)
+router.post("/", protect(), attachUser, requireRole("admin"), controller.createRestaurant)
 
 /**
  * @swagger
  * /restaurants/{id}:
  *   put:
- *     summary: Actualizar un restaurante (solo administradores)
+ *     summary: Actualizar un restaurante (solo admin)
  *     tags: [restaurants]
  *     security:
  *       - bearerAuth: []
@@ -103,16 +109,20 @@ router.post("/", keycloak.protect(), attachUser, requireRole("admin"), controlle
  *     responses:
  *       200:
  *         description: Restaurante actualizado
+ *       401:
+ *         description: No autorizado
+ *       403:
+ *         description: No tiene permisos de administrador
  *       404:
- *         description: Restaurant not found
+ *         description: Restaurante no encontrado
  */
-router.put("/:id", keycloak.protect(), attachUser, requireRole("admin"), controller.updateRestaurant)
+router.put("/:id", protect(), attachUser, requireRole("admin"), controller.updateRestaurant)
 
 /**
  * @swagger
  * /restaurants/{id}:
  *   delete:
- *     summary: Eliminar un restaurante (solo administradores)
+ *     summary: Eliminar un restaurante (solo admin)
  *     tags: [restaurants]
  *     security:
  *       - bearerAuth: []
@@ -125,9 +135,13 @@ router.put("/:id", keycloak.protect(), attachUser, requireRole("admin"), control
  *     responses:
  *       200:
  *         description: Restaurante eliminado
+ *       401:
+ *         description: No autorizado
+ *       403:
+ *         description: No tiene permisos de administrador
  *       404:
- *         description: Restaurant not found
+ *         description: Restaurante no encontrado
  */
-router.delete("/:id", keycloak.protect(), attachUser, requireRole("admin"), controller.deleteRestaurant)
+router.delete("/:id", protect(), attachUser, requireRole("admin"), controller.deleteRestaurant)
 
 module.exports = router

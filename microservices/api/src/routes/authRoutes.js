@@ -25,6 +25,8 @@ const authController = require("../controllers/authController")
  *     responses:
  *       200:
  *         description: Token JWT generado
+ *       400:
+ *         description: Faltan username o password
  *       401:
  *         description: Credenciales inválidas
  */
@@ -65,6 +67,8 @@ router.post("/login", authController.login)
  *         description: Faltan campos requeridos
  *       409:
  *         description: El usuario ya existe
+ *       500:
+ *         description: Error interno del servidor
  */
 router.post("/register", authController.register)
 

@@ -1,7 +1,7 @@
 const express = require("express")
 const router = express.Router()
 
-const { keycloak } = require("../config/keycloak")
+const protect = require("../middlewares/keycloakProtect")
 const requireRole = require("../middlewares/requireRole")
 
 const controller = require("../controllers/menusController")
@@ -17,8 +17,10 @@ const controller = require("../controllers/menusController")
  *     responses:
  *       200:
  *         description: Lista de menús
+ *       401:
+ *         description: No autorizado
  */
-router.get("/", keycloak.protect(), controller.getAllMenus)
+router.get("/", protect(), controller.getAllMenus)
 
 /**
  * @swagger
@@ -37,16 +39,18 @@ router.get("/", keycloak.protect(), controller.getAllMenus)
  *     responses:
  *       200:
  *         description: Datos del menú
+ *       401:
+ *         description: No autorizado
  *       404:
- *         description: Menu not found
+ *         description: Menú no encontrado
  */
-router.get("/:id", keycloak.protect(), controller.getMenuById)
+router.get("/:id", protect(), controller.getMenuById)
 
 /**
  * @swagger
  * /menus:
  *   post:
- *     summary: Crear un nuevo menú para un restaurante
+ *     summary: Crear un nuevo menú (solo admin)
  *     tags: [menus]
  *     security:
  *       - bearerAuth: []
@@ -71,16 +75,20 @@ router.get("/:id", keycloak.protect(), controller.getMenuById)
  *     responses:
  *       201:
  *         description: Menú creado
+ *       400:
+ *         description: Faltan campos requeridos
+ *       401:
+ *         description: No autorizado
  *       403:
- *         description: Forbidden
+ *         description: No tiene permisos de administrador
  */
-router.post("/", keycloak.protect(), requireRole("admin"), controller.createMenu)
+router.post("/", protect(), requireRole("admin"), controller.createMenu)
 
 /**
  * @swagger
  * /menus/{id}:
  *   put:
- *     summary: Actualizar un menú existente
+ *     summary: Actualizar un menú existente (solo admin)
  *     tags: [menus]
  *     security:
  *       - bearerAuth: []
@@ -108,16 +116,20 @@ router.post("/", keycloak.protect(), requireRole("admin"), controller.createMenu
  *     responses:
  *       200:
  *         description: Menú actualizado
+ *       401:
+ *         description: No autorizado
+ *       403:
+ *         description: No tiene permisos de administrador
  *       404:
- *         description: Menu not found
+ *         description: Menú no encontrado
  */
-router.put("/:id", keycloak.protect(), requireRole("admin"), controller.updateMenu)
+router.put("/:id", protect(), requireRole("admin"), controller.updateMenu)
 
 /**
  * @swagger
  * /menus/{id}:
  *   delete:
- *     summary: Eliminar un menú
+ *     summary: Eliminar un menú (solo admin)
  *     tags: [menus]
  *     security:
  *       - bearerAuth: []
@@ -130,9 +142,13 @@ router.put("/:id", keycloak.protect(), requireRole("admin"), controller.updateMe
  *     responses:
  *       200:
  *         description: Menú eliminado
+ *       401:
+ *         description: No autorizado
+ *       403:
+ *         description: No tiene permisos de administrador
  *       404:
- *         description: Menu not found
+ *         description: Menú no encontrado
  */
-router.delete("/:id", keycloak.protect(), requireRole("admin"), controller.deleteMenu)
+router.delete("/:id", protect(), requireRole("admin"), controller.deleteMenu)
 
 module.exports = router

@@ -18,14 +18,7 @@ async function createReservation(req, res, next) {
 
 async function cancelReservation(req, res, next) {
     try {
-        const reservation = await reservationService.getReservationById(req.params.id)
-        if (!reservation) return res.status(404).json({ error: "Reservation not found" })
-
-        if (reservation.user_id !== req.user.dbId) {
-            return res.status(403).json({ error: "Forbidden" })
-        }
-
-        const updated = await reservationService.cancel(req.params.id)
+        const updated = await reservationService.cancel(req.params.id, req.user.dbId)
         res.json(updated)
     } catch (error) {
         next(error)
@@ -43,9 +36,6 @@ async function getAllReservations(req, res, next) {
 
 async function updateReservation(req, res, next) {
     try {
-        const reservation = await reservationService.getById(req.params.id)
-        if (!reservation) return res.status(404).json({ error: "Reservation not found" })
-
         const { partySize, reservationDate, notes } = req.body
         const updated = await reservationService.update(
             req.params.id,
@@ -60,7 +50,6 @@ async function updateReservation(req, res, next) {
 async function getReservationById(req, res, next) {
     try {
         const reservation = await reservationService.getById(req.params.id)
-        if (!reservation) return res.status(404).json({ error: "Reservation not found" })
         res.json(reservation)
     } catch (error) {
         next(error)
@@ -68,9 +57,9 @@ async function getReservationById(req, res, next) {
 }
 
 module.exports = {
-    getAllReservations,
     createReservation,
     cancelReservation,
+    getAllReservations,
     updateReservation,
     getReservationById
 }

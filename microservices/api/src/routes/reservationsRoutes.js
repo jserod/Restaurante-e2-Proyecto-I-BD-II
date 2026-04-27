@@ -1,10 +1,10 @@
 const express = require("express")
 const router = express.Router()
 
-const { keycloak } = require("../config/keycloak")
+const protect = require("../middlewares/keycloakProtect")
 const attachUser = require("../middlewares/attachUser")
 
-const controller = require("../controllers/ReservationsController")
+const controller = require("../controllers/reservationsController")
 
 /**
  * @swagger
@@ -17,8 +17,10 @@ const controller = require("../controllers/ReservationsController")
  *     responses:
  *       200:
  *         description: Lista de reservas
+ *       401:
+ *         description: No autorizado
  */
-router.get("/", keycloak.protect(), attachUser, controller.getAllReservations)
+router.get("/", protect(), attachUser, controller.getAllReservations)
 
 /**
  * @swagger
@@ -37,10 +39,12 @@ router.get("/", keycloak.protect(), attachUser, controller.getAllReservations)
  *     responses:
  *       200:
  *         description: Datos de la reserva
+ *       401:
+ *         description: No autorizado
  *       404:
- *         description: Reservation not found
+ *         description: Reserva no encontrada
  */
-router.get("/:id", keycloak.protect(), attachUser, controller.getReservationById)
+router.get("/:id", protect(), attachUser, controller.getReservationById)
 
 /**
  * @swagger
@@ -71,9 +75,9 @@ router.get("/:id", keycloak.protect(), attachUser, controller.getReservationById
  *       201:
  *         description: Reserva creada
  *       401:
- *         description: Unauthorized
+ *         description: No autorizado
  */
-router.post("/", keycloak.protect(), attachUser, controller.createReservation)
+router.post("/", protect(), attachUser, controller.createReservation)
 
 /**
  * @swagger
@@ -106,10 +110,12 @@ router.post("/", keycloak.protect(), attachUser, controller.createReservation)
  *     responses:
  *       200:
  *         description: Reserva actualizada
+ *       401:
+ *         description: No autorizado
  *       404:
- *         description: Reservation not found
+ *         description: Reserva no encontrada
  */
-router.put("/:id", keycloak.protect(), attachUser, controller.updateReservation)
+router.put("/:id", protect(), attachUser, controller.updateReservation)
 
 /**
  * @swagger
@@ -128,11 +134,13 @@ router.put("/:id", keycloak.protect(), attachUser, controller.updateReservation)
  *     responses:
  *       200:
  *         description: Reserva cancelada
+ *       401:
+ *         description: No autorizado
  *       403:
- *         description: Forbidden
+ *         description: No puede cancelar reservas de otros usuarios
  *       404:
- *         description: Reservation not found
+ *         description: Reserva no encontrada
  */
-router.delete("/:id", keycloak.protect(), attachUser, controller.cancelReservation)
+router.delete("/:id", protect(), attachUser, controller.cancelReservation)
 
 module.exports = router

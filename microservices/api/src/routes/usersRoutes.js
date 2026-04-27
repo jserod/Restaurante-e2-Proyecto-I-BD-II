@@ -1,7 +1,7 @@
 const express = require("express")
 const router = express.Router()
 
-const { keycloak } = require("../config/keycloak")
+const protect = require("../middlewares/keycloakProtect")
 const requireRole = require("../middlewares/requireRole")
 const usersController = require("../controllers/usersController")
 
@@ -9,22 +9,19 @@ const usersController = require("../controllers/usersController")
  * @swagger
  * /users:
  *   get:
- *     summary: Listar todos los usuarios
+ *     summary: Listar todos los usuarios (solo admin)
  *     tags: [users]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Lista de usuarios
+ *       401:
+ *         description: No autorizado (token inválido o expirado)
  *       403:
- *         description: Forbidden
+ *         description: No tiene permisos de administrador
  */
-router.get(
-    "/",
-    keycloak.protect(),
-    requireRole("admin"),
-    usersController.getUsers
-)
+router.get("/", protect(), requireRole("admin"), usersController.getUsers)
 
 /**
  * @swagger
@@ -38,19 +35,15 @@ router.get(
  *       200:
  *         description: Datos del usuario autenticado
  *       401:
- *         description: Unauthorized
+ *         description: No autorizado (token inválido o expirado)
  */
-router.get(
-    "/me",
-    keycloak.protect(),
-    usersController.getMe
-)
+router.get("/me", protect(), usersController.getMe)
 
 /**
  * @swagger
  * /users/{id}:
  *   put:
- *     summary: Actualizar información de un usuario en Keycloak
+ *     summary: Actualizar información de un usuario
  *     tags: [users]
  *     security:
  *       - bearerAuth: []
@@ -77,20 +70,20 @@ router.get(
  *     responses:
  *       200:
  *         description: Usuario actualizado
+ *       400:
+ *         description: No hay campos válidos para actualizar
+ *       401:
+ *         description: No autorizado
  *       404:
- *         description: User not found
+ *         description: Usuario no encontrado
  */
-router.put(
-    "/:id",
-    keycloak.protect(),
-    usersController.updateUser
-)
+router.put("/:id", protect(), usersController.updateUser)
 
 /**
  * @swagger
  * /users/{id}:
  *   delete:
- *     summary: Eliminar un usuario de Keycloak
+ *     summary: Eliminar un usuario (solo admin)
  *     tags: [users]
  *     security:
  *       - bearerAuth: []
@@ -104,14 +97,13 @@ router.put(
  *     responses:
  *       200:
  *         description: Usuario eliminado
+ *       401:
+ *         description: No autorizado
+ *       403:
+ *         description: No tiene permisos de administrador
  *       404:
- *         description: User not found
+ *         description: Usuario no encontrado
  */
-router.delete(
-    "/:id",
-    keycloak.protect(),
-    requireRole("admin"),
-    usersController.deleteUser
-)
+router.delete("/:id", protect(), requireRole("admin"), usersController.deleteUser)
 
 module.exports = router
