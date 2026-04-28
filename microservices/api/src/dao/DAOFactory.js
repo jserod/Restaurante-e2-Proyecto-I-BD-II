@@ -76,6 +76,21 @@ class DAOFactory {
         throw new Error("Unsupported database type")
     }
   }
+
+  static getProductDAO() {
+    switch (DB_TYPE) {
+      case "postgres":
+        const ProductPostgresDAO = require("./postgres/ProductPostgresDAO")
+        return new ProductPostgresDAO()
+
+      case "mongo":
+        const ProductMongoDAO = require("./mongo/ProductMongoDAO")
+        return new ProductMongoDAO()
+
+      default:
+        throw new Error("Unsupported database type")
+    }
+  }
 }
 
 module.exports = DAOFactory;

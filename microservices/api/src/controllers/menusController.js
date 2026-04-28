@@ -1,82 +1,63 @@
-const menuService = require("../services/menuService")
-const { BadRequestError } = require("../errors")
+const menuService = require("../services/MenuService")
 
-async function getAllMenus(req, res, next) {
-    try {
-        const menus = await menuService.getAll()
-        res.json(menus)
-    } catch (error) {
-        next(error)
-    }
-}
-
-async function getMenus(req, res, next) {
-    try {
-        const menus = await menuService.getByRestaurant(req.params.restaurantId)
-        res.json(menus)
-    } catch (error) {
-        next(error)
-    }
-}
-
-async function getMenuById(req, res, next) {
-    try {
-        const menu = await menuService.getById(req.params.id)
-        res.json(menu)
-    } catch (error) {
-        next(error)
-    }
-}
-
-async function createMenu(req, res, next) {
-    try {
-        const { restaurantId, name, description, price, category } = req.body
-
-        if (!restaurantId) {
-            throw new BadRequestError("restaurantId is required")
+class MenusController {
+    async getAllMenus(req, res, next) {
+        try {
+            const menus = await menuService.getAll()
+            res.json(menus)
+        } catch (error) {
+            next(error)
         }
+    }
 
-        const menu = await menuService.create({
-            restaurantId,
-            name,
-            description,
-            price,
-            category
-        })
+    async getMenuById(req, res, next) {
+        try {
+            const menu = await menuService.getById(req.params.id)
+            res.json(menu)
+        } catch (error) {
+            next(error)
+        }
+    }
 
-        res.status(201).json(menu)
-    } catch (error) {
-        next(error)
+    async getMenusByRestaurant(req, res, next) {
+        try {
+            const menus = await menuService.getByRestaurant(req.params.restaurantId)
+            res.json(menus)
+        } catch (error) {
+            next(error)
+        }
+    }
+
+    async createMenu(req, res, next) {
+        try {
+            const { restaurantId, name, description } = req.body
+            if (!restaurantId || !name) {
+                return res.status(400).json({ error: "restaurantId and name are required" })
+            }
+            const menu = await menuService.create({ restaurantId, name, description })
+            res.status(201).json(menu)
+        } catch (error) {
+            next(error)
+        }
+    }
+
+    async updateMenu(req, res, next) {
+        try {
+            const menu = await menuService.update(req.params.id, req.body)
+            res.json(menu)
+        } catch (error) {
+            next(error)
+        }
+    }
+
+    async deleteMenu(req, res, next) {
+        try {
+            await menuService.delete(req.params.id)
+            res.json({ message: "Menu deleted" })
+        } catch (error) {
+            next(error)
+        }
     }
 }
 
-async function updateMenu(req, res, next) {
-    try {
-        const existing = await menuService.getById(req.params.id)
-        const { name, description, price, category } = req.body
-        const updated = await menuService.update(req.params.id, {
-            name, description, price, category
-        })
-        res.json(updated)
-    } catch (error) {
-        next(error)
-    }
-}
-
-async function deleteMenu(req, res, next) {
-    try {
-        await menuService.delete(req.params.id)
-        res.json({ message: "Menu deleted" })
-    } catch (error) {
-        next(error)
-    }
-}
-
-module.exports = {
-    getAllMenus,
-    getMenus,
-    getMenuById,
-    createMenu,
-    updateMenu,
-    deleteMenu
-}
+module.exports = new MenusController()

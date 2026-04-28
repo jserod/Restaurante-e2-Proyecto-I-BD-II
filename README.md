@@ -46,6 +46,7 @@ KEYCLOAK_CLIENT_SECRET=client-secret
 
 ```bash
 docker compose up
+docker compose up --scale api=3 --scale search-service=2
 ```
 
 Esto levanta los contenedores de PostgreSQL, Keycloak y Rest API.

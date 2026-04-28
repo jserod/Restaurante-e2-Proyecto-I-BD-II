@@ -28,14 +28,24 @@ class OrderMongoDAO extends IOrderDAO {
         const enrichedItems = []
 
         for (const item of items) {
-            const menu = await menusCol.findOne({ _id: new ObjectId(item.menuId) })
-            if (!menu) throw new Error(`Menu item ${item.menuId} not found`)
-            total += menu.price * item.quantity
+            const menu = await menusCol.findOne(
+                { _id: new ObjectId(item.menuId) },
+                { projection: { products: { $elemMatch: { product_id: item.productId } } } }
+            )
+
+            if (!menu || !menu.products || menu.products.length === 0) {
+                throw new Error(`Product ${item.productId} not found in menu ${item.menuId}`)
+            }
+
+            const product = menu.products[0]
+            total += product.price * item.quantity
+
             enrichedItems.push({
                 menu_id: new ObjectId(item.menuId),
-                name: menu.name,
+                product_id: item.productId,
+                name: product.name,
                 quantity: item.quantity,
-                unit_price: menu.price
+                unit_price: product.price
             })
         }
 

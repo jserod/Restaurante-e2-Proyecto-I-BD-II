@@ -21,31 +21,25 @@ class MenuMongoDAO extends IMenuDAO {
 
     async getByRestaurant(restaurantId) {
         const col = await this.getCollection()
-        return await col.find({
-            restaurant_id: new ObjectId(restaurantId)
-        }).sort({ _id: 1 }).toArray()
+        return await col.find({ restaurant_id: parseInt(restaurantId) }).sort({ _id: 1 }).toArray()
     }
 
-    async create({ restaurantId, name, description, price, category }) {
+    async create({ restaurantId, name, description }) {
         const col = await this.getCollection()
         const result = await col.insertOne({
-            restaurant_id: new ObjectId(restaurantId),
+            restaurant_id: parseInt(restaurantId),
             name,
-            description: description || "Producto sin descripción",
-            price,
-            category: category || "general",
+            description: description || null,
             created_at: new Date()
         })
         return await col.findOne({ _id: result.insertedId })
     }
 
-    async update(id, { name, description, price, category }) {
+    async update(id, { name, description }) {
         const col = await this.getCollection()
         const update = {}
-        if (name) update.name = name
-        if (description) update.description = description
-        if (price) update.price = price
-        if (category) update.category = category
+        if (name !== undefined) update.name = name
+        if (description !== undefined) update.description = description
 
         return await col.findOneAndUpdate(
             { _id: new ObjectId(id) },

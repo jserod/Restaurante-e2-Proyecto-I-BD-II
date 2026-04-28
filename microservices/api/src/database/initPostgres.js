@@ -31,8 +31,18 @@ async function initPostgres() {
                     ON DELETE CASCADE,
                 name VARCHAR(150) NOT NULL,
                 description TEXT,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+
+            CREATE TABLE IF NOT EXISTS products (
+                id SERIAL PRIMARY KEY,
+                menu_id INTEGER NOT NULL
+                    REFERENCES menus(id)
+                    ON DELETE CASCADE,
+                name VARCHAR(150) NOT NULL,
+                description TEXT,
                 price NUMERIC(10,2) NOT NULL,
-                category VARCHAR(100) DEFAULT 'general',
+                is_available BOOLEAN DEFAULT TRUE,
                 created_at TIMESTAMP DEFAULT NOW()
             );
 
@@ -73,7 +83,7 @@ async function initPostgres() {
                 order_id INTEGER NOT NULL
                     REFERENCES orders(id)
                     ON DELETE CASCADE,
-                menu_id INTEGER NOT NULL
+                product_id INTEGER NOT NULL
                     REFERENCES menus(id)
                     ON DELETE CASCADE,
                 quantity INTEGER NOT NULL DEFAULT 1,

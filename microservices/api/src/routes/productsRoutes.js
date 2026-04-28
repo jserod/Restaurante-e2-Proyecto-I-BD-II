@@ -4,30 +4,30 @@ const router = express.Router()
 const protect = require("../middlewares/keycloakProtect")
 const requireRole = require("../middlewares/requireRole")
 
-const controller = require("../controllers/menusController")
+const controller = require("../controllers/productController")
 
 /**
  * @swagger
- * /menus:
+ * /products:
  *   get:
- *     summary: Listar todos los menús
- *     tags: [menus]
+ *     summary: Listar todos los productos
+ *     tags: [Products]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Lista de menús
+ *         description: Lista de productos
  *       401:
  *         description: No autorizado
  */
-router.get("/", protect(), controller.getAllMenus)
+router.get("/", protect(), controller.getAllProducts)
 
 /**
  * @swagger
- * /menus/{id}:
+ * /products/{id}:
  *   get:
- *     summary: Obtener detalles de un menú específico
- *     tags: [menus]
+ *     summary: Obtener un producto por ID
+ *     tags: [Products]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -38,20 +38,20 @@ router.get("/", protect(), controller.getAllMenus)
  *           type: string
  *     responses:
  *       200:
- *         description: Datos del menú
+ *         description: Datos del producto
  *       401:
  *         description: No autorizado
  *       404:
- *         description: Menú no encontrado
+ *         description: Producto no encontrado
  */
-router.get("/:id", protect(), controller.getMenuById)
+router.get("/:id", protect(), controller.getProductById)
 
 /**
  * @swagger
- * /menus:
+ * /products:
  *   post:
- *     summary: Crear un nuevo menú (solo admin)
- *     tags: [menus]
+ *     summary: Crear un nuevo producto (solo admin)
+ *     tags: [Products]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -60,17 +60,21 @@ router.get("/:id", protect(), controller.getMenuById)
  *         application/json:
  *           schema:
  *             type: object
- *             required: [restaurantId, name, price]
+ *             required: [menuId, name, price]
  *             properties:
- *               restaurantId:
+ *               menuId:
  *                 type: string
  *               name:
  *                 type: string
  *               description:
  *                 type: string
+ *               price:
+ *                 type: number
+ *               isAvailable:
+ *                 type: boolean
  *     responses:
  *       201:
- *         description: Menú creado
+ *         description: Producto creado
  *       400:
  *         description: Faltan campos requeridos
  *       401:
@@ -78,14 +82,14 @@ router.get("/:id", protect(), controller.getMenuById)
  *       403:
  *         description: No tiene permisos de administrador
  */
-router.post("/", protect(), requireRole("admin"), controller.createMenu)
+router.post("/", protect(), requireRole("admin"), controller.createProduct)
 
 /**
  * @swagger
- * /menus/{id}:
+ * /products/{id}:
  *   put:
- *     summary: Actualizar un menú existente (solo admin)
- *     tags: [menus]
+ *     summary: Actualizar un producto (solo admin)
+ *     tags: [Products]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -105,24 +109,28 @@ router.post("/", protect(), requireRole("admin"), controller.createMenu)
  *                 type: string
  *               description:
  *                 type: string
+ *               price:
+ *                 type: number
+ *               isAvailable:
+ *                 type: boolean
  *     responses:
  *       200:
- *         description: Menú actualizado
+ *         description: Producto actualizado
  *       401:
  *         description: No autorizado
  *       403:
  *         description: No tiene permisos de administrador
  *       404:
- *         description: Menú no encontrado
+ *         description: Producto no encontrado
  */
-router.put("/:id", protect(), requireRole("admin"), controller.updateMenu)
+router.put("/:id", protect(), requireRole("admin"), controller.updateProduct)
 
 /**
  * @swagger
- * /menus/{id}:
+ * /products/{id}:
  *   delete:
- *     summary: Eliminar un menú (solo admin)
- *     tags: [menus]
+ *     summary: Eliminar un producto (solo admin)
+ *     tags: [Products]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -133,14 +141,14 @@ router.put("/:id", protect(), requireRole("admin"), controller.updateMenu)
  *           type: string
  *     responses:
  *       200:
- *         description: Menú eliminado
+ *         description: Producto eliminado
  *       401:
  *         description: No autorizado
  *       403:
  *         description: No tiene permisos de administrador
  *       404:
- *         description: Menú no encontrado
+ *         description: Producto no encontrado
  */
-router.delete("/:id", protect(), requireRole("admin"), controller.deleteMenu)
+router.delete("/:id", protect(), requireRole("admin"), controller.deleteProduct)
 
 module.exports = router

@@ -10,11 +10,11 @@ const { AppError } = require("./errors")
 const swaggerUi = require("swagger-ui-express")
 const swaggerSpec = require("./config/swagger")
 
-// routes
 const authRoutes = require("./routes/authRoutes")
 const usersRoutes = require("./routes/usersRoutes")
 const restaurantsRoutes = require("./routes/restaurantsRoutes")
 const menusRoutes = require("./routes/menusRoutes")
+const productsRoutes = require("./routes/productsRoutes")
 const reservationsRoutes = require("./routes/reservationsRoutes")
 const ordersRoutes = require("./routes/ordersRoutes")
 
@@ -41,7 +41,19 @@ app.use(
 )
 
 /* ========================
-   DOCUMENTATION (ANTES de Keycloak)
+   DEBUG HOST (para validar balanceo)
+======================== */
+
+app.get("/_host", (req, res) => {
+    res.json({
+        container: require("os").hostname(),
+        pid: process.pid,
+        service: "restaurant-api"
+    })
+})
+
+/* ========================
+   SWAGGER (ANTES de Keycloak)
 ======================== */
 
 app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
@@ -83,6 +95,7 @@ app.use(keycloak.middleware())
 app.use("/users", usersRoutes)
 app.use("/restaurants", restaurantsRoutes)
 app.use("/menus", menusRoutes)
+app.use("/products", productsRoutes)
 app.use("/reservations", reservationsRoutes)
 app.use("/orders", ordersRoutes)
 

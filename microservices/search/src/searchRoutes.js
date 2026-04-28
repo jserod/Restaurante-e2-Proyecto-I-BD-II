@@ -19,7 +19,7 @@ router.post("/reindex", controller.reindex)
  * /search/products:
  *   get:
  *     summary: Buscar productos por texto
- *     description: Realiza una búsqueda en nombre, descripción y categoría
+ *     description: Realiza una búsqueda en nombre y descripción
  *     parameters:
  *       - in: query
  *         name: q
@@ -37,7 +37,7 @@ router.get("/products", controller.searchByText)
  * @openapi
  * /search/products/category/{categoria}:
  *   get:
- *     summary: Buscar productos por categoría
+ *     summary: Buscar productos por categoría (nombre del menú)
  *     parameters:
  *       - in: path
  *         name: categoria

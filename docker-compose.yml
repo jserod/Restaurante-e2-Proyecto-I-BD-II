@@ -1,3 +1,5 @@
+version: "3.8"
+
 services:
 
   # =========================
@@ -121,7 +123,9 @@ services:
   # =========================
   api:
     build: ./microservices/api
-    container_name: restaurant-api
+    #container_name: restaurant-api
+    #deploy:
+    #  replicas: ${API_REPLICAS:-3}
     restart: always
     env_file:
       - .env
@@ -131,8 +135,6 @@ services:
       KEYCLOAK_URL: http://host.docker.internal:8080
       MONGO_URI: mongodb://mongo-router:27017
       MONGO_DB_NAME: ${MONGO_DB_NAME}
-    ports:
-      - "${PORT}:3000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -169,7 +171,9 @@ services:
   # =========================
   search-service:
     build: ./microservices/search
-    container_name: search-service
+    #container_name: search-service
+    #deploy:
+    #  replicas: ${SEARCH_REPLICAS:-2}
     restart: always
     env_file:
       - .env
@@ -180,14 +184,27 @@ services:
       MONGO_URI: mongodb://mongo-router:27017
       MONGO_DB_NAME: ${MONGO_DB_NAME}
       DB_HOST: postgres
-    ports:
-      - "3001:3001"
     depends_on:
       elasticsearch:
         condition: service_healthy
     volumes:
       - ./microservices/search:/app
       - /app/node_modules
+
+  # =========================
+  # NGINX - BALANCEADOR DE CARGA
+  # =========================
+  nginx:
+    image: nginx:alpine
+    container_name: nginx-balancer
+    ports:
+      - "80:80"                          
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - api
+      - search-service
+    restart: always
 
 volumes:
   postgres_data:

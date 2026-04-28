@@ -72,9 +72,11 @@ router.get("/:id", protect(), attachUser, controller.getOrderById)
  *                 type: array
  *                 items:
  *                   type: object
- *                   required: [menuId, quantity]
+ *                   required: [menuId, productId, quantity]  
  *                   properties:
  *                     menuId:
+ *                       type: string
+ *                     productId:                              
  *                       type: string
  *                     quantity:
  *                       type: integer

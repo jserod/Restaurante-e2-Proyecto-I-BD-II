@@ -1,5 +1,5 @@
 const { client, INDEX } = require("./elastic")
-const menuDataSource = require("./menuDataSource")
+const productDataSource = require("./productDataSource")
 
 async function searchByText(req, res, next) {
     try {
@@ -13,7 +13,7 @@ async function searchByText(req, res, next) {
             query: {
                 multi_match: {
                     query: q,
-                    fields: ["name", "description", "category"],
+                    fields: ["name", "description"],
                     fuzziness: "AUTO"
                 }
             }
@@ -44,22 +44,22 @@ async function searchByCategory(req, res, next) {
 
 async function reindex(req, res, next) {
     try {
-        const menus = await menuDataSource.getMenus()
+        const products = await productDataSource.getProducts()
 
-        if (menus.length === 0) {
-            return res.json({ message: "No menus to index", indexed: 0 })
+        if (products.length === 0) {
+            return res.json({ message: "No products to index", indexed: 0 })
         }
 
-        const operations = menus.flatMap(menu => [
-            { index: { _index: INDEX, _id: menu.id } },
-            menu
+        const operations = products.flatMap(product => [
+            { index: { _index: INDEX, _id: product.id } },
+            product
         ])
 
         const result = await client.bulk({ operations })
 
         res.json({
             message: "Reindex completed",
-            indexed: menus.length,
+            indexed: products.length,
             errors: result.errors
         })
 

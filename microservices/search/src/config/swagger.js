@@ -7,9 +7,9 @@ const options = {
             title: "Search Service API",
             version: "1.0.0",
             description: "Microservicio de búsqueda con ElasticSearch"
-        }
+        },
     },
-    apis: ["src/**/*.js"] 
+    apis: ["src/**/*.js"]
 }
 
 const swaggerSpec = swaggerJsdoc(options)

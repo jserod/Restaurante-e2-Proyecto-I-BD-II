@@ -12,18 +12,51 @@ const PORT = process.env.SEARCH_PORT || 3001
 app.use(cors())
 app.use(express.json())
 
-app.get("/openapi.json", (req, res) => {
+/* ========================
+   OPENAPI SPEC
+======================== */
+app.get("/search/openapi.json", (req, res) => {
     res.json(swaggerSpec)
 })
 
-app.use("/docs", swaggerUI.serve, swaggerUI.setup(swaggerSpec))
+/* ========================
+   SWAGGER UI
+======================== */
+app.use("/search/docs", swaggerUI.serve, swaggerUI.setup(swaggerSpec, {
+    explorer: true,
+    customSiteTitle: "Search Service Docs",
+    swaggerOptions: {
+        url: "/search/openapi.json"
+    }
+}))
 
+/* ========================
+   DEBUG HOST (para validar balanceo)
+======================== */
+
+app.get("/_host", (req, res) => {
+    res.json({
+        container: require("os").hostname(),
+        pid: process.pid,
+        service: "search-service"
+    })
+})
+
+/* ========================
+   HEALTH CHECK
+======================== */
 app.get("/health", (req, res) => {
     res.json({ status: "OK", service: "search-service" })
 })
 
+/* ========================
+   SEARCH ROUTES
+======================== */
 app.use("/search", searchRoutes)
 
+/* ========================
+   ERROR HANDLER
+======================== */
 app.use((err, req, res, next) => {
     console.error(err.stack)
     res.status(500).json({ error: "Internal server error" })

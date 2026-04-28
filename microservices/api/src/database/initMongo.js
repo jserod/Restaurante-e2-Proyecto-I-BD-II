@@ -13,8 +13,11 @@ async function initMongo() {
     await db.collection("menus").createIndex({ restaurant_id: 1 })
     await db.collection("menus").createIndex({ category: 1 })
     await db.collection("menus").createIndex(
-        { name: "text", description: "text", category: "text" }
+        { name: "text", description: "text" }
     )
+
+    await db.collection("menus").createIndex({ "products.name": 1 })
+    await db.collection("menus").createIndex({ "products.tags": 1 })
 
     await db.collection("reservations").createIndex({ user_id: 1 })
     await db.collection("reservations").createIndex({ restaurant_id: 1 })

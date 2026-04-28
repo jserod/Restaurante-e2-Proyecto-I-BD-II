@@ -4,7 +4,7 @@ const client = new Client({
     node: process.env.ELASTIC_URL || "http://elasticsearch:9200"
 })
 
-const INDEX = "menus"
+const INDEX = "products"
 
 async function ensureIndex() {
     const exists = await client.indices.exists({ index: INDEX })
@@ -16,13 +16,15 @@ async function ensureIndex() {
                     id: { type: "keyword" },
                     name: { type: "text" },
                     description: { type: "text" },
-                    category: { type: "keyword" },
                     price: { type: "float" },
+                    isAvailable: { type: "boolean" },
+                    category: { type: "keyword" },
+                    menuId: { type: "keyword" },
                     restaurantId: { type: "keyword" }
                 }
             }
         })
-        console.log("Index 'menus' created")
+        console.log("Index 'products' created")
     }
 }
 
