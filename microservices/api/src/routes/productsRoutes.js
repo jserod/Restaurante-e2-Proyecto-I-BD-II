@@ -3,6 +3,7 @@ const router = express.Router()
 
 const protect = require("../middlewares/keycloakProtect")
 const requireRole = require("../middlewares/requireRole")
+const { cache, invalidateCache, invalidateOnSuccess } = require("../middlewares/cache")
 
 const controller = require("../controllers/productController")
 
@@ -20,7 +21,7 @@ const controller = require("../controllers/productController")
  *       401:
  *         description: No autorizado
  */
-router.get("/", protect(), controller.getAllProducts)
+router.get("/", protect(), cache(60), controller.getAllProducts)
 
 /**
  * @swagger
@@ -44,7 +45,7 @@ router.get("/", protect(), controller.getAllProducts)
  *       404:
  *         description: Producto no encontrado
  */
-router.get("/:id", protect(), controller.getProductById)
+router.get("/:id", protect(), cache(300), controller.getProductById)
 
 /**
  * @swagger
@@ -82,7 +83,10 @@ router.get("/:id", protect(), controller.getProductById)
  *       403:
  *         description: No tiene permisos de administrador
  */
-router.post("/", protect(), requireRole("admin"), controller.createProduct)
+router.post("/", protect(), requireRole("admin"), async (req, res, next) => {
+    await controller.createProduct(req, res, next)
+    await invalidateOnSuccess("cache:GET:/products*")
+})
 
 /**
  * @swagger
@@ -123,7 +127,10 @@ router.post("/", protect(), requireRole("admin"), controller.createProduct)
  *       404:
  *         description: Producto no encontrado
  */
-router.put("/:id", protect(), requireRole("admin"), controller.updateProduct)
+router.put("/:id", protect(), requireRole("admin"), async (req, res, next) => {
+    await controller.updateProduct(req, res, next)
+    await invalidateOnSuccess("cache:GET:/products*")
+})
 
 /**
  * @swagger
@@ -149,6 +156,9 @@ router.put("/:id", protect(), requireRole("admin"), controller.updateProduct)
  *       404:
  *         description: Producto no encontrado
  */
-router.delete("/:id", protect(), requireRole("admin"), controller.deleteProduct)
+router.delete("/:id", protect(), requireRole("admin"), async (req, res, next) => {
+    await controller.deleteProduct(req, res, next)
+    await invalidateOnSuccess("cache:GET:/products*")
+})
 
 module.exports = router

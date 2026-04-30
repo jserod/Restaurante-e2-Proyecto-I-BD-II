@@ -119,6 +119,18 @@ services:
       - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json
 
   # =========================
+  # REDIS (CACHE)
+  # =========================
+  redis:
+    image: redis:7-alpine
+    container_name: redis-cache
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: always
+
+  # =========================
   # API
   # =========================
   api:
@@ -135,12 +147,16 @@ services:
       KEYCLOAK_URL: http://host.docker.internal:8080
       MONGO_URI: mongodb://mongo-router:27017
       MONGO_DB_NAME: ${MONGO_DB_NAME}
+      REDIS_URL: redis://redis:6379
+      DEBUG: keycloak:*
     depends_on:
       postgres:
         condition: service_healthy
       mongo-init:
         condition: service_completed_successfully
       keycloak:
+        condition: service_started
+      redis:
         condition: service_started
     volumes:
       - ./microservices/api:/app
@@ -178,15 +194,20 @@ services:
     env_file:
       - .env
     environment:
+      KEYCLOAK_URL: http://localhost:8080
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080
       ELASTIC_URL: http://elasticsearch:9200
       SEARCH_PORT: 3001
       DB_TYPE: ${DB_TYPE}
       MONGO_URI: mongodb://mongo-router:27017
       MONGO_DB_NAME: ${MONGO_DB_NAME}
       DB_HOST: postgres
+      REDIS_URL: redis://redis:6379
     depends_on:
       elasticsearch:
         condition: service_healthy
+      redis:
+        condition: service_started
     volumes:
       - ./microservices/search:/app
       - /app/node_modules
@@ -215,3 +236,4 @@ volumes:
   shard1b_data:
   shard1c_data:
   elastic_data:
+  redis_data:

@@ -3,6 +3,7 @@ const router = express.Router()
 
 const protect = require("../middlewares/keycloakProtect")
 const requireRole = require("../middlewares/requireRole")
+const { cache, invalidateCache, invalidateOnSuccess } = require("../middlewares/cache")
 
 const controller = require("../controllers/menusController")
 
@@ -20,7 +21,7 @@ const controller = require("../controllers/menusController")
  *       401:
  *         description: No autorizado
  */
-router.get("/", protect(), controller.getAllMenus)
+router.get("/", protect(), cache(120), controller.getAllMenus)
 
 /**
  * @swagger
@@ -44,7 +45,7 @@ router.get("/", protect(), controller.getAllMenus)
  *       404:
  *         description: Menú no encontrado
  */
-router.get("/:id", protect(), controller.getMenuById)
+router.get("/:id", protect(), cache(300), controller.getMenuById)
 
 /**
  * @swagger
@@ -78,7 +79,10 @@ router.get("/:id", protect(), controller.getMenuById)
  *       403:
  *         description: No tiene permisos de administrador
  */
-router.post("/", protect(), requireRole("admin"), controller.createMenu)
+router.post("/", protect(), requireRole("admin"), async (req, res, next) => {
+    await controller.createMenu(req, res, next)
+    await invalidateOnSuccess("cache:GET:/menus*")
+})
 
 /**
  * @swagger
@@ -115,7 +119,10 @@ router.post("/", protect(), requireRole("admin"), controller.createMenu)
  *       404:
  *         description: Menú no encontrado
  */
-router.put("/:id", protect(), requireRole("admin"), controller.updateMenu)
+router.put("/:id", protect(), requireRole("admin"), async (req, res, next) => {
+    await controller.updateMenu(req, res, next)
+    await invalidateOnSuccess("cache:GET:/menus*")
+})
 
 /**
  * @swagger
@@ -141,6 +148,9 @@ router.put("/:id", protect(), requireRole("admin"), controller.updateMenu)
  *       404:
  *         description: Menú no encontrado
  */
-router.delete("/:id", protect(), requireRole("admin"), controller.deleteMenu)
+router.delete("/:id", protect(), requireRole("admin"), async (req, res, next) => {
+    await controller.deleteMenu(req, res, next)
+    await invalidateOnSuccess("cache:GET:/menus*")
+})
 
 module.exports = router

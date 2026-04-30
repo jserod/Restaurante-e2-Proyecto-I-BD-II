@@ -2,7 +2,7 @@ const jwt = require("jsonwebtoken")
 const { createPublicKey } = require("crypto")
 const keycloakService = require("../services/keycloakService")
 
-function keycloakProtectFactory() { //Para poder usar protect() en routes
+function keycloakProtectFactory() { //Para poder usar protect() porque el que viene con keycloak no me funciona sepa dios por que
     return async function (req, res, next) {
         const authHeader = req.headers.authorization
         if (!authHeader || !authHeader.startsWith("Bearer ")) {

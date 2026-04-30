@@ -1,6 +1,7 @@
 const express = require("express")
 const router = express.Router()
 const controller = require("./searchController")
+const { cache, invalidateCache, invalidateOnSuccess } = require("./middlewares/cache")
 
 /**
  * @openapi
@@ -12,7 +13,7 @@ const controller = require("./searchController")
  *       200:
  *         description: Resultado del proceso de indexación
  */
-router.post("/reindex", controller.reindex)
+router.post("/reindex", invalidateOnSuccess("cache:GET:/search*"), controller.reindex)
 
 /**
  * @openapi
@@ -31,7 +32,7 @@ router.post("/reindex", controller.reindex)
  *       200:
  *         description: Lista de productos encontrados
  */
-router.get("/products", controller.searchByText)
+router.get("/products", cache(180), controller.searchByText)
 
 /**
  * @openapi
@@ -48,6 +49,6 @@ router.get("/products", controller.searchByText)
  *       200:
  *         description: Lista de productos filtrados
  */
-router.get("/products/category/:categoria", controller.searchByCategory)
+router.get("/products/category/:categoria", cache(180), controller.searchByCategory)
 
 module.exports = router

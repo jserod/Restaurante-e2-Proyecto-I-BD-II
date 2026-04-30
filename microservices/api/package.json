@@ -5,11 +5,17 @@
   "main": "index.js",
   "scripts": {
     "start": "node src/server.js",
-    "test": "jest --coverage"
+    "test": "jest --coverage",
+    "test:watch": "jest --watch"
   },
   "jest": {
-    "setupFilesAfterEnv": [
-      "<rootDir>/src/tests/jest.setup.js"
+    "testEnvironment": "node",
+    "coverageDirectory": "coverage",
+    "collectCoverageFrom": [
+      "src/**/*.js",
+      "!src/server.js",
+      "!src/config/**",
+      "!src/tests/**"
     ],
     "coverageThreshold": {
       "global": {
@@ -30,7 +36,8 @@
     "mongodb": "^7.2.0",
     "pg": "^8.20.0",
     "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.1"
+    "swagger-ui-express": "^5.0.1",
+    "redis": "^4.6.0"
   },
   "devDependencies": {
     "jest": "^30.3.0",

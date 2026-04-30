@@ -1,0 +1,13 @@
+const createMockRedisClient = () => ({
+    get: jest.fn(),
+    setEx: jest.fn().mockResolvedValue(undefined),  // ← Ahora retorna Promise
+    keys: jest.fn(),
+    del: jest.fn()
+})
+
+const createMockRedisModule = () => ({
+    connectRedis: jest.fn(),
+    client: createMockRedisClient()
+})
+
+module.exports = { createMockRedisClient, createMockRedisModule }
