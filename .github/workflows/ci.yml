@@ -1,0 +1,188 @@
+# .github/workflows/ci.yml
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  API_IMAGE: ${{ github.repository }}/api
+  SEARCH_IMAGE: ${{ github.repository }}/search
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15.6
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: testdb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: microservices/api/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./microservices/api
+        run: npm ci
+
+      - name: Run unit tests with coverage
+        working-directory: ./microservices/api
+        env:
+          DB_TYPE: postgres
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER: test
+          DB_PASSWORD: test
+          DB_NAME: testdb
+          REDIS_URL: redis://localhost:6379
+          MONGO_URI: mongodb://localhost:27017
+          MONGO_DB_NAME: testdb
+          KEYCLOAK_URL: http://localhost:8080
+          KEYCLOAK_REALM: test
+          KEYCLOAK_CLIENT_ID: test
+          KEYCLOAK_CLIENT_SECRET: test
+          KEYCLOAK_ADMIN: admin
+          KEYCLOAK_ADMIN_PASSWORD: admin
+          SESSION_SECRET: test-secret
+        run: npm test -- --coverage --coverageThreshold='{"global":{"lines":90}}'
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: microservices/api/coverage/
+
+  build-and-push:
+    name: Build & Push Images
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for API
+        id: meta-api
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.API_IMAGE }}
+          tags: |
+            type=sha,prefix=,suffix=,format=short
+            type=ref,event=branch
+            latest
+
+      - name: Build and push API image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./microservices/api
+          push: true
+          tags: ${{ steps.meta-api.outputs.tags }}
+          labels: ${{ steps.meta-api.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Extract metadata for Search
+        id: meta-search
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.SEARCH_IMAGE }}
+          tags: |
+            type=sha,prefix=,suffix=,format=short
+            type=ref,event=branch
+            latest
+
+      - name: Build and push Search image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./microservices/search
+          push: true
+          tags: ${{ steps.meta-search.outputs.tags }}
+          labels: ${{ steps.meta-search.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy-local:
+    name: Local Deploy Check
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create .env file
+        run: |
+          cat << EOF > .env
+          DB_TYPE=postgres
+          DB_HOST=postgres
+          DB_PORT=5432
+          DB_USER=${{ secrets.DB_USER || 'postgres' }}
+          DB_PASSWORD=${{ secrets.DB_PASSWORD || 'postgres' }}
+          DB_NAME=restaurant
+          POSTGRES_EXTERNAL_PORT=5432
+          MONGO_DB_NAME=restaurant
+          KEYCLOAK_PORT=8080
+          KEYCLOAK_ADMIN=admin
+          KEYCLOAK_ADMIN_PASSWORD=admin
+          REDIS_URL=redis://redis:6379
+          API_REPLICAS=2
+          SEARCH_REPLICAS=2
+          SESSION_SECRET=${{ secrets.SESSION_SECRET || 'dev-secret-change-in-prod' }}
+          EOF
+
+      - name: Verify Docker Compose
+        run: docker compose config
+
+      - name: Pull images
+        run: |
+          docker pull ${{ env.REGISTRY }}/${{ env.API_IMAGE }}:latest || true
+          docker pull ${{ env.REGISTRY }}/${{ env.SEARCH_IMAGE }}:latest || true
