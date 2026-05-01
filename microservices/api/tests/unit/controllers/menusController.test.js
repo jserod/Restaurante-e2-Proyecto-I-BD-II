@@ -18,7 +18,7 @@ describe("MenusController", () => {
             delete: jest.fn()
         }
 
-        jest.doMock("../../../src/services/MenuService", () => menuService)
+        jest.doMock("../../../src/services/menuService", () => menuService)
         menusController = require("../../../src/controllers/menusController")
     })
 

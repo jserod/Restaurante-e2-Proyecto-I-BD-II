@@ -19,7 +19,7 @@ describe("Menus Routes", () => {
         }
 
         // Mock del service ANTES de cargar el controller
-        jest.doMock("../../src/services/MenuService", () => mockMenuService)
+        jest.doMock("../../src/services/menuService", () => mockMenuService)
 
         // Mock de middlewares de auth
         jest.doMock("../../src/middlewares/keycloakProtect", () => {
