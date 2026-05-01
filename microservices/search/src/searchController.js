@@ -1,4 +1,4 @@
-const { client, INDEX } = require("./elastic")
+const { client, INDEX } = require("./config/elastic")
 const productDataSource = require("./productDataSource")
 
 async function searchByText(req, res, next) {

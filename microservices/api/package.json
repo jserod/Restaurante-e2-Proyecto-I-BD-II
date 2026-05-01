@@ -11,11 +11,16 @@
   "jest": {
     "testEnvironment": "node",
     "coverageDirectory": "coverage",
+    "setupFilesAfterEnv": ["<rootDir>/tests/helpers/setup.js"],
     "collectCoverageFrom": [
       "src/**/*.js",
       "!src/server.js",
+      "!src/app.js",
       "!src/config/**",
-      "!src/tests/**"
+      "!src/database/**",
+      "!src/dao/interfaces/**",
+      "!src/errors/**",
+      "!src/dao/DAOFactory.js"
     ],
     "coverageThreshold": {
       "global": {

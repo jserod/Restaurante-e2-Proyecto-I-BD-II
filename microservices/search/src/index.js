@@ -1,7 +1,7 @@
 require("dotenv").config()
 const express = require("express")
 const cors = require("cors")
-const { ensureIndex } = require("./elastic")
+const { ensureIndex } = require("./config/elastic")
 const searchRoutes = require("./searchRoutes")
 const swaggerUI = require("swagger-ui-express")
 const swaggerSpec = require("./config/swagger")
