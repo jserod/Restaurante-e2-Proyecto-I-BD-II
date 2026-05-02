@@ -42,6 +42,20 @@ jobs:
         ports:
           - 27017:27017
 
+      elasticsearch:
+        image: elasticsearch:8.12.0
+        env:
+          discovery.type: single-node
+          xpack.security.enabled: false
+          ES_JAVA_OPTS: -Xms512m -Xmx512m
+        options: >-
+          --health-cmd "curl -f http://localhost:9200/_cluster/health || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 9200:9200
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -84,6 +98,20 @@ jobs:
         with:
           name: coverage-report
           path: microservices/api/coverage/
+
+      - name: Run search service tests
+        working-directory: ./microservices/search
+        env:
+          ELASTICSEARCH_URL: http://localhost:9200
+          # otras variables que necesite tu search service
+        run: npm test -- --coverage
+
+      - name: Upload search coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report-search
+          path: microservices/search/coverage/
 
   build-and-push:
     name: Build & Push Images
