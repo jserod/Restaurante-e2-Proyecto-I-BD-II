@@ -71,6 +71,10 @@ jobs:
         working-directory: ./microservices/api
         run: npm ci
 
+      - name: Install search service dependencies
+        working-directory: ./microservices/search
+        run: npm ci
+
       - name: Run unit tests with coverage
         working-directory: ./microservices/api
         env:
