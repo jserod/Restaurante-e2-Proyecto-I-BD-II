@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
 
   # =========================
@@ -134,7 +132,7 @@ services:
   # API
   # =========================
   api:
-    image: ghcr.io/${GITHUB_REPOSITORY}/api:latest
+    #image: ghcr.io/${GITHUB_REPOSITORY}/api:latest
     build: ./microservices/api
     #container_name: restaurant-api
     #deploy:
@@ -187,7 +185,7 @@ services:
   # SEARCH SERVICE
   # =========================
   search-service:
-    image: ghcr.io/${GITHUB_REPOSITORY}/search:latest
+    #image: ghcr.io/${GITHUB_REPOSITORY}/search:latest
     build: ./microservices/search
     #container_name: search-service
     #deploy:
