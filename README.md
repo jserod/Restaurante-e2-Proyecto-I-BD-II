@@ -1,191 +1,422 @@
-# Reserva Inteligente de Restaurantes
+# Restaurante E2 - Sistema de Gestion de Restaurantes
 
-API REST para la gestión de reservas en restaurantes, con autenticación JWT mediante Keycloak, contenedorización con Docker y documentación con Swagger.
+## Arquitectura Profesional con CI/CD, Sharding, ElasticSearch y Escalabilidad
+
+Sistema distribuido para la gestion de restaurantes, reservas, menus, productos y pedidos. Implementa arquitectura de microservicios con soporte dual PostgreSQL/MongoDB, replicacion y sharding en MongoDB, busqueda full-text con ElasticSearch, cacheo con Redis, balanceo de carga con Nginx y pipeline CI/CD completo.
 
 ---
 
-## Descripción del Proyecto
+## Tabla de Contenidos
 
-Este sistema permite gestionar usuarios, restaurantes, menús, reservas de mesas y pedidos. La API está protegida con autenticación basada en JWT mediante Keycloak, y diferencia entre dos roles: `client` y `admin`.
+- [Caracteristicas](#caracteristicas)
+- [Arquitectura](#arquitectura)
+- [Requisitos Previos](#requisitos-previos)
+- [Instalacion](#instalacion)
+- [Configuracion](#configuracion)
+- [Uso](#uso)
+- [Cambio de Base de Datos](#cambio-de-base-de-datos)
+- [Escalabilidad](#escalabilidad)
+- [Kubernetes](#kubernetes)
+- [Tests](#tests)
+- [CICD](#cicd)
+- [Generacion de Datos con LLM](#generacion-de-datos-con-llm)
+- [Endpoints](#endpoints)
+- [Estructura del Proyecto](#estructura-del-proyecto)
+- [Tecnologias](#tecnologias)
+- [Autores](#autores)
+
+---
+
+## Caracteristicas
+
+| Caracteristica | Descripcion |
+|---|---|
+| **Dual DB** | Cambio en iniciación entre PostgreSQL y MongoDB sin modificar codigo |
+| **MongoDB Sharding** | Cluster con replica set (1 primario, 2 secundarios) + shard  |
+| **ElasticSearch** | Microservicio independiente de busqueda por texto con reindexacion |
+| **Redis Cache** | Cacheo de respuestas frecuentes con politicas de expiracion |
+| **Balanceador Nginx** | Enrutamiento `/api/**` y `/search/**` con distribucion de carga |
+| **CICD** | Pipeline GitHub Actions: tests -> build -> local deploy |
+| **Escalabilidad** | Escalado horizontal con Docker Compose y Kubernetes |
+| **Auth** | JWT via Keycloak con roles `admin` y `user` |
+
+---
+
+## Arquitectura
+
+```
++-------------------------------------------------------------+
+|                         CLIENTE                              |
+|              (Browser / Postman / Swagger)                   |
++----------------------+--------------------------------------+
+                       |
+                       v
++-------------------------------------------------------------+
+|                    NGINX (Puerto 80)                         |
+|              Balanceador de Carga + Gateway                  |
+|         /api/* ----> api_servers (least_conn)                |
+|       /search/* ----> search_servers (least_conn)            |
++----------------------+--------------------------------------+
+                       |
+           +-----------+-----------+
+           v                       v
++---------------------+   +---------------------+
+|   API Service       |   |   Search Service    |
+|   (Puerto 3000)     |   |   (Puerto 3001)     |
+|   Replicas: N       |   |   Replicas: N       |
++---------+-----------+   +---------+-----------+
+          |                         |
+          v                         v
++-----------------+         +-----------------+
+|  PostgreSQL     |         |  ElasticSearch  |
+|  (Puerto 5432)  |         |  (Puerto 9200)  |
++-----------------+         +-----------------+
+          |                         ^
+          v                         |
++-----------------+         +-----------------+
+|  MongoDB Router |         |     Redis       |
+|  (Puerto 27017) |         |  (Puerto 6379)  |
+|  + Sharding     |         |     (Cache)     |
++-----------------+         +-----------------+
+          |
+          v
++-----------------------------------------+
+|         MongoDB Sharded Cluster         |
+|  +---------+    +-----------------+     |
+|  | Config  |<---|  Config Servers |     |
+|  | Servers |    |  (3 replicas)   |     |
+|  | (3)     |    +-----------------+     |
+|  +----+----+                            |
+|       |                                 |
+|       v                                 |
+|  +---------+    +-----------------+     |
+|  |  mongos |<---|  Shard 1        |     |
+|  | (Router)|    |  (3 replicas)   |     |
+|  +---------+    +-----------------+     |
++-----------------------------------------+
+          |
+          v
++-----------------+
+|    Keycloak     |
+|  (Puerto 8080)  |
+|   Auth JWT      |
++-----------------+
+```
 
 ---
 
 ## Requisitos Previos
 
-- [Docker](https://www.docker.com/products/docker-desktop) y Docker Compose instalados
+- [Docker Desktop](https://www.docker.com/products/docker-desktop) (con Docker Compose)
+- [Node.js](https://nodejs.org/)
+- [Ollama](https://ollama.com/) (opcional, para generacion de datos con LLM)
 
 ---
 
-## Instalación y Uso
+## Instalacion
 
 ### 1. Configurar variables de entorno
 
-Crear un archivo `.env` en la raíz del proyecto con el siguiente contenido:
+Crear archivo `.env` en la raiz:
 
 ```env
 PORT=3000
+SEARCH_PORT=3001
 POSTGRES_EXTERNAL_PORT=5432
 
-DB_HOST=localhost
 DB_PORT=5432
 DB_USER=admin
 DB_PASSWORD=admin
 DB_NAME=restaurant
+DB_TYPE=postgres
+DB_HOST=localhost
+MONGO_URI=mongodb://mongo-router:27017
+MONGO_DB_NAME=restaurant
 
 KEYCLOAK_PORT=8080
 KEYCLOAK_ADMIN=admin
 KEYCLOAK_ADMIN_PASSWORD=admin
 
-KEYCLOAK_URL=http://localhost:8080/
+KEYCLOAK_URL=http://localhost:8080
 KEYCLOAK_REALM=restaurant-realm
 KEYCLOAK_CLIENT_ID=restaurant-api
-KEYCLOAK_CLIENT_SECRET=client-secret
+KEYCLOAK_CLIENT_SECRET=vtKM5Zuios5Lrdp1bqKvt6P8cKT1OVjf
+
+GITHUB_REPOSITORY=jserod/restaurante-e2-proyecto-i-bd-ii
 ```
 
-### 2. Levantar los servicios con Docker
+### 2. Levantar la infraestructura
+
+En powershell correr:
+```bash
+# Levantar todos los servicios
+./script/start.ps1
+
+```
+
+---
+
+## Configuracion
+
+### Keycloak
+
+Una vez que Keycloak este corriendo en `http://localhost:8080`:
+
+1. Iniciar sesion con `admin` / `admin`
+2. El realm `restaurant-realm` ya esta importado desde `keycloak/realm-export.json`
+3. El Client Secret ya esta configurado en el `.env`
+
+### MongoDB Sharding
+
+El sharding se inicializa automaticamente via el contenedor `mongo-init`. Verificar:
 
 ```bash
-docker compose up
-docker compose up --scale api=3 --scale search-service=2
+docker logs mongo-init
 ```
 
-Esto levanta los contenedores de PostgreSQL, Keycloak y Rest API.
+---
 
-### 3. Configurar Keycloak CORREGIR
+## Uso
 
-Una vez que Keycloak esté corriendo en `http://localhost:8080`:
+### Documentacion Swagger
 
-1. Iniciar sesión con las credenciales de administrador
-2. Ir a Manage Realms y seleccionar `restaurant-realm`
-3. Crear los usuarios de prueba y asignarles contraseña y el rol correspondiente (`admin` o `user`) desde **Role mapping → Assign Role → Client roles**
-4. Entrar al cliente `restaurant-api`. Copiar el **Client secret** desde la pestaña **Credentials** y colocarlo en el `.env`
+| Servicio | URL |
+|---|---|
+| API Principal | http://localhost/api/docs/ |
+| Search Service | http://localhost/search/docs/ |
 
-### 4. Acceder a Swagger
+### Acceder a la API
 
-Una vez esten lo contenedores activos entra en `http://localhost:3000/api/docs`:
+1. Registrar usuario: `POST /api/auth/register`
+2. Login: `POST /api/auth/login` -> obtener token JWT
+3. Autorizar en Swagger con: `Bearer <token>`
 
-En Swagger se mostraran todos los endpoint y podras interactuar con ellos
-1. Entrar a /auth/register y agregar los datos del json para crear un usuario en keycloak 
-2. Usar esos mismos datos para entrar a /auth/login y copia el token de acceso
-3. Hacer click en **Authorize** e ingresar el token obtenido en el paso anterior para probar los endpoints directamente desde la interfaz.
+---
 
-### 5. Realizar pruebas unitarias
+## Cambio de Base de Datos
+
+El sistema permite cambiar entre PostgreSQL y MongoDB al (inicio no, durante ejecución) **sin modificar codigo fuente**, solo cambiando la variable `DB_TYPE`.
+
+### Usar PostgreSQL 
+
+```env
+DB_TYPE=postgres
+```
+
+### Usar MongoDB
+
+```env
+DB_TYPE=mongo
+```
+
+### Arquitectura DAO
+
+La seleccion de base de datos se realiza mediante el patron **Factory** en `src/dao/DAOFactory.js`:
+
+```javascript
+const DAOFactory = require('./src/dao/DAOFactory')
+
+// DB_TYPE determina automaticamente que implementacion usar
+const userDAO = DAOFactory.getUserDAO()      // Postgres o Mongo
+const menuDAO = DAOFactory.getMenuDAO()      // Postgres o Mongo
+// etc.
+```
+
+---
+
+## Escalabilidad
+
+### Docker Compose
 
 ```bash
-npm test -- --coverage --coverageReporters=text-summary
+# Escalar horizontalmente
+
+# Verificar distribucion de carga
+curl http://localhost/_host
+curl http://localhost/search/_host
 ```
-Con ese comando aprecian las pruebas unitarias que cubren el poco más del 90%
 
-## Endpoints Disponibles
+### Kubernetes (Minikube)
 
-### Autenticación — Keycloak
 
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| POST | `/auth/register` | Registro de un nuevo usuario |
-| POST | `/auth/login` | Inicio de sesión y obtención de JWT |
+---
 
-> Estos endpoints son gestionados directamente por Keycloak.
+## Tests
 
-### Usuarios
+### Ejecutar tests localmente
 
-| Método | Endpoint | Rol requerido | Descripción |
-|--------|----------|---------------|-------------|
-| GET | `/users` | admin | Listar todos los usuarios |
-| GET | `/users/me` | user / admin | Obtener usuario autenticado |
-| PUT | `/users/:id` | user / admin | Actualizar información de un usuario de keycloak |
-| DELETE | `/users/:id` | admin | Eliminar un usuario de keycloak |
+```bash
+cd microservices/api
+npm install
+npm test 
+```
 
-### Restaurantes
+### Tests del Search Service
 
-| Método | Endpoint | Rol requerido | Descripción |
-|--------|----------|---------------|-------------|
-| GET | `/restaurants` | user / admin | Listar restaurantes disponibles |
-| GET | `/restaurants/:id` | user / admin | Obtener un restaurante por ID |
-| POST | `/restaurants` | admin | Registrar un restaurante |
-| PUT | `/restaurants/:id` | admin | Actualizar un restaurante |
-| DELETE | `/restaurants/:id` | admin | Eliminar un restaurante |
+```bash
+cd microservices/search
+npm install
+npm test 
+```
 
-### Menús
+### Cobertura
 
-| Método | Endpoint | Rol requerido | Descripción |
-|--------|----------|---------------|-------------|
-| GET | `/menus` | user / admin | Listar todos los menús |
-| GET | `/menus/:id` | user / admin | Obtener un menú por ID |
-| POST | `/menus` | admin | Crear un nuevo menú |
-| PUT | `/menus/:id` | admin | Actualizar un menú |
-| DELETE | `/menus/:id` | admin | Eliminar un menú |
+| Tipo | Cobertura |
+|---|---|
+| Lineas | > 90% |
+| Funciones | > 90% |
+| Branches | > 90% |
 
-### Reservas
+---
 
-| Método | Endpoint | Rol requerido | Descripción |
-|--------|----------|---------------|-------------|
-| GET | `/reservations` | user / admin | Listar todas las reservas |
-| GET | `/reservations/:id` | user / admin | Obtener una reserva por ID |
-| POST | `/reservations` | user / admin | Crear una nueva reserva |
-| PUT | `/reservations/:id` | user / admin | Actualizar una reserva |
-| DELETE | `/reservations/:id` | user / admin | Cancelar una reserva |
+## CICD
 
-### Pedidos
+Pipeline GitHub Actions (`.github/workflows/ci.yml`):
 
-| Método | Endpoint | Rol requerido | Descripción |
-|--------|----------|---------------|-------------|
-| GET | `/orders` | user / admin | Listar todos los pedidos |
-| GET | `/orders/:id` | user / admin | Obtener un pedido por ID |
-| POST | `/orders` | user / admin | Realizar un pedido |
-| PUT | `/orders/:id` | user / admin | Actualizar estado de un pedido |
-| DELETE | `/orders/:id` | user / admin | Eliminar un pedido |
+```
+Push/PR ---> Tests (unit + integration) ---> Build Images ---> Push to GHCR
+                |                              |
+                v                              v
+         PostgreSQL + MongoDB           api:latest
+         + Redis + ElasticSearch        search:latest
+```
+
+### Jobs
+
+| Job | Descripcion |
+|---|---|
+| `test` | Ejecuta tests con cobertura >= 90% |
+
+---
+
+## Generacion de Datos con LLM
+
+Requiere [Ollama](https://ollama.com/) con modelo `llama3.2`:
+
+```bash
+# Terminal 1: Iniciar Ollama
+ollama serve
+
+# Terminal 2: Ejecutar generador
+cd scripts
+npm install
+$env:DB_TYPE="postgres"
+$env:OLLAMA_MODEL="llama3.2"
+node generateDataLLM.js
+```
+
+Genera automaticamente:
+- 5 restaurantes costarricenses realistas
+- 4 menus por restaurante
+- Insercion directa en PostgreSQL o MongoDB
+
+---
+
+## Endpoints
+
+### API Principal (`/api`)
+
+| Recurso | Metodos | Descripcion |
+|---|---|---|
+| `/auth/register` | POST | Registro de usuario |
+| `/auth/login` | POST | Login y obtencion de JWT |
+| `/users` | GET, PUT, DELETE | Gestion de usuarios |
+| `/restaurants` | GET, POST, PUT, DELETE | Restaurantes |
+| `/menus` | GET, POST, PUT, DELETE | Menus |
+| `/products` | GET, POST, PUT, DELETE | Productos |
+| `/reservations` | GET, POST, PUT, DELETE | Reservas |
+| `/orders` | GET, POST, PUT, DELETE | Pedidos |
+
+### Search Service (`/search`)
+
+| Endpoint | Descripcion |
+|---|---|
+| `GET /search/products?q=texto` | Busqueda textual en productos |
+| `GET /search/products/category/:categoria` | Filtrar por categoria |
+| `POST /search/reindex` | Reindexar productos manualmente |
 
 ---
 
 ## Estructura del Proyecto
 
 ```
-TC01_BDII/
+Restaurante-e2-Proyecto-I-BD-II/
+├── .github/workflows/ci.yml      # Pipeline CI/CD
+├── docker-compose.yml            # Orquestacion completa
+├── .env                          # Variables de entorno
+├── nginx/
+│   └── nginx.conf                # Configuracion del balanceador
+├── mongo/
+│   └── init.sh                   # Inicializacion de sharding
 ├── keycloak/
-│   └── realm-export.json
-├── src/
-│   ├── config/
-│   │   ├── database.js
-│   │   ├── keycloak.js
-│   │   └── swagger.js
-│   ├── controllers/
-│   │   ├── usersController.js
-│   │   ├── restaurantsController.js
-│   │   ├── menuController.js
-│   │   ├── reservationsController.js
-│   │   └── ordersController.js
-│   ├── database/
-│   │   └── init.js
-│   ├── middlewares/
-│   │   ├── attachUser.js
-│   │   ├── authUser.js
-│   │   └── requireRole.js
-│   ├── models/
-│   │   ├── users.js
-│   │   ├── restaurants.js
-│   │   ├── menus.js
-│   │   ├── reservations.js
-│   │   └── orders.js
-│   ├── routes/
-│   │   ├── usersRoutes.js
-│   │   ├── restaurantsRoutes.js
-│   │   ├── menusRoutes.js
-│   │   ├── reservationsRoutes.js
-│   │   └── ordersRoutes.js
-│   └── app.js
-├── .env
-├── docker-compose.yml
-├── Dockerfile
-└── README.md
+│   └── realm-export.json         # Configuracion de Keycloak
+├── k8s/                          # Manifests de Kubernetes
+│   ├── namespace.yml
+│   ├── configmap.yml
+│   ├── secrets.yml
+│   ├── api-deployment.yml
+│   ├── api-service.yml
+│   ├── search-deployment.yml
+│   ├── search-service.yml
+│   ├── nginx-deployment.yml
+│   └── nginx-service.yml
+├── microservices/
+│   ├── api/                      # Microservicio principal
+│   │   ├── src/
+│   │   │   ├── config/           # DB, Keycloak, Redis, Swagger
+│   │   │   ├── controllers/      # Logica de negocio
+│   │   │   ├── dao/              # Patron DAO (Postgres + Mongo)
+│   │   │   ├── middlewares/      # Auth, cache, roles
+│   │   │   ├── routes/           # Definicion de endpoints
+│   │   │   ├── services/         # Logica de servicios
+│   │   │   ├── app.js            
+│   │   │   └── server.js         
+│   │   ├── tests/                # Tests unitarios e integracion
+│   │   ├── Dockerfile
+│   │   └── package.json
+│   └── search/                   # Microservicio de busqueda
+│       ├── src/
+│       │   ├── searchController.js
+│       │   ├── searchRoutes.js
+│       │   ├── productDataSource.js
+│       │   └── config/
+│       ├── tests/
+│       ├── Dockerfile
+│       └── package.json
+└── scripts/
+    ├── generateDataLLM.js        # Generador de datos con Ollama
+    ├── start.ps1                 # Script de inicio
+    ├── stop.ps1                  # Script de detencion
+    └── cacheValidate.ps1         # Validacion de cache
 ```
 
 ---
 
-## Tecnologías Utilizadas
+## Tecnologias
 
-- **Node.js** + **Express** — servidor y API REST
-- **PostgreSQL** — Base de datos relacional
-- **Keycloak** — Autenticación y gestión de sesiones con JWT
-- **Docker** + **Docker Compose** — Contenedorización y orquestación
-- **Swagger** — Documentación interactiva de la API
+| Capa | Tecnologia |
+|---|---|
+| **Backend** | Node.js, Express.js |
+| **Bases de Datos** | PostgreSQL, MongoDB (Sharded) |
+| **Busqueda** | ElasticSearch |
+| **Cache** | Redis |
+| **Auth** | Keycloak |
+| **Balanceador** | Nginx |
+| **Contenedores** | Docker, Docker Compose |
+| **Orquestacion** | Kubernetes |
+| **CICD** | GitHub Actions |
+| **Tests** | Jest, Supertest |
+| **Docs** | Swagger/OpenAPI |
+| **LLM** | Ollama (Llama 3.2) |
+
+---
+
+## Autores
+
+- **Josué Rodríguez** - [@jserod](https://github.com/jserod)
+
+---
+
+## Licencia
+
+Este proyecto es parte del curso de Bases de Datos II, Instituto Tecnológico de Costa Rica.
