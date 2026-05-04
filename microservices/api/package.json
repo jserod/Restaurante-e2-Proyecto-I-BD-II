@@ -11,7 +11,9 @@
   "jest": {
     "testEnvironment": "node",
     "coverageDirectory": "coverage",
-    "setupFilesAfterEnv": ["<rootDir>/tests/helpers/setup.js"],
+    "setupFilesAfterEnv": [
+      "<rootDir>/tests/helpers/setup.js"
+    ],
     "collectCoverageFrom": [
       "src/**/*.js",
       "!src/server.js",
@@ -39,10 +41,11 @@
     "jsonwebtoken": "^9.0.3",
     "keycloak-connect": "^26.1.1",
     "mongodb": "^7.2.0",
+    "ollama": "^0.6.3",
     "pg": "^8.20.0",
+    "redis": "^4.6.0",
     "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.1",
-    "redis": "^4.6.0"
+    "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
     "jest": "^30.3.0",

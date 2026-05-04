@@ -1,31 +1,51 @@
-Write-Host "=== Iniciando infraestructura con Docker Compose ===" -ForegroundColor Green
+# start.ps1 - Docker Compose para Restaurante E2
+
+Write-Host "=== Eliminando contenedores previos ===" -ForegroundColor Yellow
+docker compose down --remove-orphans --volumes 2>$null | Out-Null
+
+Write-Host "=== Iniciando infraestructura ===" -ForegroundColor Green
 docker compose up -d
 
-Write-Host "`n=== Esperando que los servicios esten listos ===" -ForegroundColor Yellow
+Write-Host "`n=== Esperando servicios (30s) ===" -ForegroundColor Yellow
 Start-Sleep -Seconds 30
 
-Write-Host "`n=== Aplicando manifests de Kubernetes ===" -ForegroundColor Green
-kubectl apply -f k8s/namespace.yml
-Start-Sleep -Seconds 5
-kubectl apply -f k8s/configmap.yml
-kubectl apply -f k8s/secrets.yml
-kubectl apply -f k8s/api-deployment.yml
-kubectl apply -f k8s/api-service.yml
-kubectl apply -f k8s/search-deployment.yml
-kubectl apply -f k8s/search-service.yml
-kubectl apply -f k8s/nginx-configmap.yml
-kubectl apply -f k8s/nginx-deployment.yml
-kubectl apply -f k8s/nginx-service.yml
+Write-Host "`n=== Escalando API y Search ===" -ForegroundColor Green
+docker compose up -d --scale api=3 --scale search-service=2
 
-Write-Host "`n=== Esperando que los pods esten listos ===" -ForegroundColor Yellow
-Start-Sleep -Seconds 30
+Write-Host "`n=== Verificando salud ===" -ForegroundColor Green
+$apiOk = $false
+$searchOk = $false
+$elapsed = 0
 
-Write-Host "`n=== Estado de los pods ===" -ForegroundColor Green
-kubectl get pods -n restaurant
+while (($elapsed -lt 60) -and (-not ($apiOk -and $searchOk))) {
+    if (-not $apiOk) {
+        try {
+            $r = Invoke-WebRequest -Uri "http://localhost/api/health" -UseBasicParsing -TimeoutSec 3 -ErrorAction Stop
+            if ($r.StatusCode -eq 200) {
+                $apiOk = $true
+                Write-Host "  API: OK" -ForegroundColor Green
+            }
+        } catch {}
+    }
+    if (-not $searchOk) {
+        try {
+            $r = Invoke-WebRequest -Uri "http://localhost/search/health" -UseBasicParsing -TimeoutSec 3 -ErrorAction Stop
+            if ($r.StatusCode -eq 200) {
+                $searchOk = $true
+                Write-Host "  Search: OK" -ForegroundColor Green
+            }
+        } catch {}
+    }
+    if (-not ($apiOk -and $searchOk)) {
+        Start-Sleep -Seconds 2
+        $elapsed += 2
+    }
+}
 
-Write-Host "`n=== Escalando servicios ===" -ForegroundColor Green
-kubectl scale deployment api --replicas=3 -n restaurant
-kubectl scale deployment search-service --replicas=3 -n restaurant
+Write-Host "`n=== Estado ===" -ForegroundColor Green
+docker compose ps
 
-Write-Host "`n=== Pods finales ===" -ForegroundColor Green
-kubectl get pods -n restaurant -w
+Write-Host "`n=== URLs ===" -ForegroundColor Cyan
+Write-Host "  API:      http://localhost/api/docs/"
+Write-Host "  Search:   http://localhost/search/docs/"
+Write-Host "  Keycloak: http://localhost:8080"

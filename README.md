@@ -36,7 +36,7 @@ Sistema distribuido para la gestion de restaurantes, reservas, menus, productos 
 | **ElasticSearch** | Microservicio independiente de busqueda por texto con reindexacion |
 | **Redis Cache** | Cacheo de respuestas frecuentes con politicas de expiracion |
 | **Balanceador Nginx** | Enrutamiento `/api/**` y `/search/**` con distribucion de carga |
-| **CICD** | Pipeline GitHub Actions: tests -> build -> local deploy |
+| **CICD** | Pipeline GitHub Actions: tests -> build -> push to GHCR (GitHub Container Registry)|
 | **Escalabilidad** | Escalado horizontal con Docker Compose y Kubernetes |
 | **Auth** | JWT via Keycloak con roles `admin` y `user` |
 
@@ -46,16 +46,16 @@ Sistema distribuido para la gestion de restaurantes, reservas, menus, productos 
 
 ```
 +-------------------------------------------------------------+
-|                         CLIENTE                              |
-|              (Browser / Postman / Swagger)                   |
+|                         CLIENTE                             |
+|              (Browser / Postman / Swagger)                  |
 +----------------------+--------------------------------------+
                        |
                        v
 +-------------------------------------------------------------+
-|                    NGINX (Puerto 80)                         |
-|              Balanceador de Carga + Gateway                  |
-|         /api/* ----> api_servers (least_conn)                |
-|       /search/* ----> search_servers (least_conn)            |
+|                    NGINX (Puerto 80)                        |
+|              Balanceador de Carga + Gateway                 |
+|         /api/* ----> api_servers (least_conn)               |
+|       /search/* ----> search_servers (least_conn)           |
 +----------------------+--------------------------------------+
                        |
            +-----------+-----------+
@@ -109,7 +109,7 @@ Sistema distribuido para la gestion de restaurantes, reservas, menus, productos 
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop) (con Docker Compose)
 - [Node.js](https://nodejs.org/)
-- [Ollama](https://ollama.com/) (opcional, para generacion de datos con LLM)
+- [Ollama](https://ollama.com/) (opcional, para generación de datos con LLM)
 
 ---
 
@@ -142,12 +142,14 @@ KEYCLOAK_REALM=restaurant-realm
 KEYCLOAK_CLIENT_ID=restaurant-api
 KEYCLOAK_CLIENT_SECRET=vtKM5Zuios5Lrdp1bqKvt6P8cKT1OVjf
 
+OLLAMA_MODEL=llama3.2
+
 GITHUB_REPOSITORY=jserod/restaurante-e2-proyecto-i-bd-ii
 ```
 
 ### 2. Levantar la infraestructura
 
-En powershell correr:
+Viene con un script para iniciar Docker y Kubernetes, en powershell correr:
 ```bash
 # Levantar todos los servicios
 ./script/start.ps1
@@ -165,6 +167,7 @@ Una vez que Keycloak este corriendo en `http://localhost:8080`:
 1. Iniciar sesion con `admin` / `admin`
 2. El realm `restaurant-realm` ya esta importado desde `keycloak/realm-export.json`
 3. El Client Secret ya esta configurado en el `.env`
+4. Asegurarse que que el realm seleccionado sea `restaurant-realm`
 
 ### MongoDB Sharding
 
@@ -181,7 +184,7 @@ docker logs mongo-init
 ### Documentacion Swagger
 
 | Servicio | URL |
-|---|---|
+|----------|-----|
 | API Principal | http://localhost/api/docs/ |
 | Search Service | http://localhost/search/docs/ |
 
@@ -195,7 +198,7 @@ docker logs mongo-init
 
 ## Cambio de Base de Datos
 
-El sistema permite cambiar entre PostgreSQL y MongoDB al (inicio no, durante ejecución) **sin modificar codigo fuente**, solo cambiando la variable `DB_TYPE`.
+El sistema permite cambiar entre PostgreSQL y MongoDB (al inicio, no durante ejecución) **sin modificar codigo fuente**, solo cambiando la variable `DB_TYPE`.
 
 ### Usar PostgreSQL 
 
@@ -217,9 +220,13 @@ La seleccion de base de datos se realiza mediante el patron **Factory** en `src/
 const DAOFactory = require('./src/dao/DAOFactory')
 
 // DB_TYPE determina automaticamente que implementacion usar
-const userDAO = DAOFactory.getUserDAO()      // Postgres o Mongo
-const menuDAO = DAOFactory.getMenuDAO()      // Postgres o Mongo
-// etc.
+// Postgres o Mongo
+const userDAO = DAOFactory.getUserDAO()      
+const menuDAO = DAOFactory.getMenuDAO()      
+const RestaurantDAO = DAOFactory.getRestaurantDAO()        
+const orderDAO = DAOFactory.getOrderDAO()                  
+const ReservationDAO = DAOFactory.getReservationDAO()      
+const productDAO = DAOFactory.getProductDAO()              
 ```
 
 ---
@@ -236,8 +243,14 @@ curl http://localhost/_host
 curl http://localhost/search/_host
 ```
 
-### Kubernetes (Minikube)
+### Kubernetes 
 
+El proyecto incluye manifiestos para desplegar en cualquier cluster de Kubernetes local (ej. Docker Desktop). Los servicios de infraestructura (MongoDB, PostgreSQL, Redis, ElasticSearch, Keycloak) deben estar disponibles externamente al cluster o desplegarse por separado.
+
+### Desplegar
+
+```bash
+kubectl apply -f k8s/
 
 ---
 
@@ -281,12 +294,6 @@ Push/PR ---> Tests (unit + integration) ---> Build Images ---> Push to GHCR
          + Redis + ElasticSearch        search:latest
 ```
 
-### Jobs
-
-| Job | Descripcion |
-|---|---|
-| `test` | Ejecuta tests con cobertura >= 90% |
-
 ---
 
 ## Generacion de Datos con LLM
@@ -298,16 +305,17 @@ Requiere [Ollama](https://ollama.com/) con modelo `llama3.2`:
 ollama serve
 
 # Terminal 2: Ejecutar generador
-cd scripts
+cd microservices/api
 npm install
-$env:DB_TYPE="postgres"
+$env:DB_TYPE="postgres" || $env:DB_TYPE="mongo"
 $env:OLLAMA_MODEL="llama3.2"
-node generateDataLLM.js
+node tests/generateDataLLM.js
 ```
 
 Genera automaticamente:
 - 5 restaurantes costarricenses realistas
-- 4 menus por restaurante
+- 3 menus por restaurante
+- 4 productos por menu
 - Insercion directa en PostgreSQL o MongoDB
 
 ---
@@ -361,33 +369,43 @@ Restaurante-e2-Proyecto-I-BD-II/
 │   ├── nginx-deployment.yml
 │   └── nginx-service.yml
 ├── microservices/
-│   ├── api/                      # Microservicio principal
+│   ├── api/                        # Microservicio principal
 │   │   ├── src/
-│   │   │   ├── config/           # DB, Keycloak, Redis, Swagger
-│   │   │   ├── controllers/      # Logica de negocio
-│   │   │   ├── dao/              # Patron DAO (Postgres + Mongo)
-│   │   │   ├── middlewares/      # Auth, cache, roles
-│   │   │   ├── routes/           # Definicion de endpoints
-│   │   │   ├── services/         # Logica de servicios
+│   │   │   ├── config/             # DB, Keycloak, Redis, Swagger
+│   │   │   ├── controllers/        # Logica de negocio
+│   │   │   ├── dao/                # Patron DAO (Postgres + Mongo)
+│   |   │   │    ├── interfaces/
+│   |   │   │    ├── postgres/
+│   |   │   │    ├── mongo/
+│   |   │   │    └── FAOFactory.js
+│   │   │   ├── middlewares/        # Auth, cache, roles
+│   │   │   ├── routes/             # Definicion de endpoints
+│   │   │   ├── services/           # Logica de servicios
 │   │   │   ├── app.js            
 │   │   │   └── server.js         
-│   │   ├── tests/                # Tests unitarios e integracion
+│   │   ├── tests/                  # Tests unitarios e integracion
+│   │   │   ├── helpers/
+│   │   │   ├── unit/
+│   │   │   ├── integration/ 
+│   │   |   └── generateDataLLM.js  # Generador de datos con Ollama
 │   │   ├── Dockerfile
 │   │   └── package.json
-│   └── search/                   # Microservicio de busqueda
+│   └── search/                     # Microservicio de busqueda
 │       ├── src/
 │       │   ├── searchController.js
 │       │   ├── searchRoutes.js
 │       │   ├── productDataSource.js
 │       │   └── config/
 │       ├── tests/
+│       │   ├── helpers/
+│       │   ├── unit/
+│       │   └── integration/ 
 │       ├── Dockerfile
 │       └── package.json
 └── scripts/
-    ├── generateDataLLM.js        # Generador de datos con Ollama
-    ├── start.ps1                 # Script de inicio
-    ├── stop.ps1                  # Script de detencion
-    └── cacheValidate.ps1         # Validacion de cache
+    ├── start.ps1                   # Script de inicio
+    ├── stop.ps1                    # Script de detencion
+    └── cacheValidate.ps1           # Validacion de cache
 ```
 
 ---
