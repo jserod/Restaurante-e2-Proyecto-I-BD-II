@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Interfaz abstracta para DAO de productos.
+ * Define el contrato que deben implementar ProductPostgresDAO y ProductMongoDAO.
+ */
+
 class IProductDAO {
     async getAll() {
         throw new Error("Not implemented")

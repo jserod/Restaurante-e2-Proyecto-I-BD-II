@@ -1,4 +1,3 @@
-// tests/integration/ordersRoutes.test.js
 const request = require("supertest")
 const express = require("express")
 const { NotFoundError } = require("../../src/errors")
@@ -18,10 +17,8 @@ describe("Orders Routes", () => {
             delete: jest.fn()
         }
 
-        // Mock del service ANTES de cargar el controller
         jest.doMock("../../src/services/orderService", () => mockOrderService)
 
-        // Mock de middlewares de auth
         jest.doMock("../../src/middlewares/keycloakProtect", () => {
             return () => (req, res, next) => next()
         })
@@ -39,7 +36,6 @@ describe("Orders Routes", () => {
         app.use(express.json())
         app.use("/orders", ordersRoutes)
         
-        // Error handler
         app.use((err, req, res, next) => {
             res.status(err.statusCode || 500).json({ error: err.message })
         })

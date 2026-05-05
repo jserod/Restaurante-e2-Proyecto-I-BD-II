@@ -1,4 +1,3 @@
-// tests/unit/dao/mongo/UserMongoDAO.test.js
 const { createMockCollection, createMockDb, createMockGetDb } = require("../../../helpers/mockMongo")
 
 describe("UserMongoDAO", () => {

@@ -1,5 +1,3 @@
-// tests/unit/services/orderService.test.js
-
 const { NotFoundError, BadRequestError } = require("../../../src/errors")
 
 describe("OrderService", () => {

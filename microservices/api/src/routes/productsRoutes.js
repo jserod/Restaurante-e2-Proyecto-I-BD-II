@@ -21,7 +21,7 @@ const controller = require("../controllers/productController")
  *       401:
  *         description: No autorizado
  */
-router.get("/", protect(), cache(60), controller.getAllProducts)
+router.get("/", protect(), cache(300), controller.getAllProducts)
 
 /**
  * @swagger

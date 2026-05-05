@@ -1,6 +1,16 @@
+/**
+ * @fileoverview Controlador de usuarios. Gestiona perfiles, sincronización Keycloak-BD local y administración.
+ */
+
 const keycloakService = require("../services/keycloakService")
 const userService = require("../services/userService")
 
+/**
+ * Obtiene todos los usuarios registrados en Keycloak.
+ * @param {import("express").Request} req
+ * @param {import("express").Response} res
+ * @param {import("express").NextFunction} next
+ */
 async function getUsers(req, res, next) {
   try {
     const users = await keycloakService.getAllKeycloakUsers()
@@ -15,6 +25,12 @@ async function getUsers(req, res, next) {
   }
 }
 
+/**
+ * Obtiene o crea el perfil del usuario autenticado sincronizando Keycloak con BD local.
+ * @param {import("express").Request} req
+ * @param {import("express").Response} res
+ * @param {import("express").NextFunction} next
+ */
 async function getMe(req, res, next) {
   try {
     const token = req.kauth.grant.access_token.content
@@ -29,6 +45,12 @@ async function getMe(req, res, next) {
   }
 }
 
+/** 
+ * Actualiza el perfil de un usuario tanto en Keycloak como en BD local.
+ * @param {import("express").Request} req
+ * @param {import("express").Response} res
+ * @param {import("express").NextFunction} next
+ */
 async function updateUser(req, res, next) {
   try {
     const { email, firstName, lastName } = req.body
@@ -58,6 +80,12 @@ async function updateUser(req, res, next) {
   }
 }
 
+/**
+ * Elimina un usuario tanto de Keycloak como de la BD local.
+ * @param {import("express").Request} req
+ * @param {import("express").Response} res
+ * @param {import("express").NextFunction} next
+ */
 async function deleteUser(req, res, next) {
   try {
     // Elimina de Keycloak (lanza error si falla)

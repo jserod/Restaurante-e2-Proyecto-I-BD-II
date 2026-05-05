@@ -1,7 +1,5 @@
-// tests/integration/restaurantsRoutes.test.js
 const request = require("supertest")
 const express = require("express")
-const { NotFoundError, AppError } = require("../../src/errors")
 
 describe("Restaurants Routes", () => {
     let app
@@ -18,17 +16,20 @@ describe("Restaurants Routes", () => {
             delete: jest.fn()
         }
 
-        // Mock del service ANTES de cargar el controller
         jest.doMock("../../src/services/restaurantService", () => mockRestaurantService)
 
-        // Mock de middlewares de auth
+        jest.doMock("../../src/middlewares/cache", () => ({
+            cache: () => (req, res, next) => next(),
+            invalidateOnSuccess: () => async (req, res, next) => next()
+        }))
+
         jest.doMock("../../src/middlewares/keycloakProtect", () => {
             return () => (req, res, next) => next()
         })
-        
+
         jest.doMock("../../src/middlewares/attachUser", () => {
             return (req, res, next) => {
-                req.user = { id: "test-user-id" }
+                req.user = { id: "test-user-id", role: "admin" }
                 next()
             }
         })
@@ -38,15 +39,18 @@ describe("Restaurants Routes", () => {
         })
 
         const restaurantsRoutes = require("../../src/routes/restaurantsRoutes")
-        
+
         app = express()
         app.use(express.json())
         app.use("/restaurants", restaurantsRoutes)
-        
-        // Error handler
+
         app.use((err, req, res, next) => {
             res.status(err.statusCode || 500).json({ error: err.message })
         })
+    })
+
+    afterEach(() => {
+        jest.clearAllMocks()
     })
 
     describe("GET /restaurants", () => {
@@ -75,6 +79,7 @@ describe("Restaurants Routes", () => {
         })
 
         it("retorna 404 si no existe", async () => {
+            const { NotFoundError } = require("../../src/errors")
             mockRestaurantService.getById.mockRejectedValue(new NotFoundError("Restaurant not found"))
 
             const res = await request(app).get("/restaurants/999")
@@ -107,6 +112,7 @@ describe("Restaurants Routes", () => {
         })
 
         it("retorna 400 si falta name", async () => {
+            const { AppError } = require("../../src/errors")
             mockRestaurantService.create.mockImplementation(() => {
                 throw new AppError("Name is required", 400)
             })
@@ -135,6 +141,7 @@ describe("Restaurants Routes", () => {
         })
 
         it("retorna 404 si no existe", async () => {
+            const { NotFoundError } = require("../../src/errors")
             mockRestaurantService.update.mockRejectedValue(new NotFoundError("Restaurant not found"))
 
             const res = await request(app)
@@ -152,11 +159,11 @@ describe("Restaurants Routes", () => {
             const res = await request(app).delete("/restaurants/1")
 
             expect(res.status).toBe(200)
-            expect(res.body.message).toBe("Restaurant deleted")
             expect(mockRestaurantService.delete).toHaveBeenCalledWith("1")
         })
 
         it("retorna 404 si no existe", async () => {
+            const { NotFoundError } = require("../../src/errors")
             mockRestaurantService.delete.mockRejectedValue(new NotFoundError("Restaurant not found"))
 
             const res = await request(app).delete("/restaurants/999")

@@ -1,5 +1,15 @@
+/**
+ * @fileoverview Fuente de datos para indexación de productos.
+ * Abstrae la lectura desde PostgreSQL o MongoDB según DB_TYPE.
+ * Normaliza los productos a un formato común para Elasticsearch.
+ */
+
 class ProductDataSource {
 
+    /**
+     * Obtiene productos desde la base de datos activa (MongoDB o PostgreSQL).
+     * @returns {Promise<Array>} Productos normalizados
+     */
     async getProducts() {
         const DB_TYPE = process.env.DB_TYPE || "postgres"
 
@@ -15,6 +25,11 @@ class ProductDataSource {
         }
     }
 
+    /**
+     * Extrae productos de documentos embebidos en MongoDB.
+     * Aplana la estructura restaurantes → menús → productos.
+     * @returns {Promise<Array>}
+     */
     async getFromMongo() {
         const { MongoClient } = require("mongodb")
         const client = new MongoClient(process.env.MONGO_URI)
@@ -23,26 +38,36 @@ class ProductDataSource {
             await client.connect()
 
             const db = client.db(process.env.MONGO_DB_NAME)
-            const raw = await db.collection("menus").find().toArray()
+            const raw = await db.collection("restaurants").find(
+                { "menus.products": { $exists: true } },
+                { projection: { menus: 1, name: 1 } }
+            ).toArray()
 
             const products = []
-            for (const menu of raw) {
-                const menuId = menu._id.toString()
-                const menuName = menu.name
-                const restaurantId = menu.restaurant_id?.toString() || ""
+            for (const restaurant of raw) {
+                const restaurantId = restaurant._id.toString()
+                const restaurantName = restaurant.name
 
-                if (menu.products && Array.isArray(menu.products)) {
-                    for (const p of menu.products) {
-                        products.push({
-                            id: p.product_id,
-                            name: p.name,
-                            description: p.description || "Producto sin descripción",
-                            price: p.price,
-                            isAvailable: p.is_available,
-                            category: menuName.toLowerCase(),
-                            menuId: menuId,
-                            restaurantId: restaurantId
-                        })
+                if (!restaurant.menus) continue
+
+                for (const menu of restaurant.menus) {
+                    const menuId = menu._id.toString()
+                    const menuName = menu.name
+
+                    if (menu.products && Array.isArray(menu.products)) {
+                        for (const p of menu.products) {
+                            products.push({
+                                id: p.product_id,
+                                name: p.name,
+                                description: p.description || "Producto sin descripción",
+                                price: p.price,
+                                isAvailable: p.is_available,
+                                category: menuName.toLowerCase(),
+                                menuId: menuId,
+                                restaurantId: restaurantId,
+                                restaurantName: restaurantName
+                            })
+                        }
                     }
                 }
             }
@@ -54,6 +79,10 @@ class ProductDataSource {
         }
     }
 
+    /**
+     * Extrae productos desde PostgreSQL via JOIN menus-products.
+     * @returns {Promise<Array>}
+     */
     async getFromPostgres() {
         const { Pool } = require("pg")
 

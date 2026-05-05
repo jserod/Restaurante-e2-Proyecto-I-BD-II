@@ -1,4 +1,3 @@
-// tests/integration/usersRoutes.test.js
 const request = require("supertest")
 const express = require("express")
 const { NotFoundError } = require("../../src/errors")
@@ -23,11 +22,9 @@ describe("Users Routes", () => {
             deleteUser: jest.fn()
         }
 
-        // Mock de services ANTES de cargar el controller
         jest.doMock("../../src/services/keycloakService", () => mockKeycloakService)
         jest.doMock("../../src/services/userService", () => mockUserService)
 
-        // Mock de middlewares de auth
         jest.doMock("../../src/middlewares/keycloakProtect", () => {
             return () => (req, res, next) => {
                 req.kauth = {
@@ -57,7 +54,6 @@ describe("Users Routes", () => {
         app.use(express.json())
         app.use("/users", usersRoutes)
         
-        // Error handler
         app.use((err, req, res, next) => {
             res.status(err.statusCode || 500).json({ error: err.message })
         })

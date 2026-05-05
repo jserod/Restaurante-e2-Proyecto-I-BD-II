@@ -1,6 +1,17 @@
+/**
+ * @fileoverview Controlador de búsqueda.
+ * Expone búsqueda full-text por texto libre, filtrado por categoría y reindexación masiva.
+ */
+
 const { client, INDEX } = require("./config/elastic")
 const productDataSource = require("./productDataSource")
 
+/**
+ * Búsqueda full-text en nombre y descripción de productos.
+ * @param {import("express").Request} req
+ * @param {import("express").Response} res
+ * @param {import("express").NextFunction} next
+ */
 async function searchByText(req, res, next) {
     try {
         const { q } = req.query
@@ -25,6 +36,12 @@ async function searchByText(req, res, next) {
     }
 }
 
+/**
+ * Búsqueda por categoría exacta (menú al que pertenece el producto).
+ * @param {import("express").Request} req
+ * @param {import("express").Response} res
+ * @param {import("express").NextFunction} next
+ */
 async function searchByCategory(req, res, next) {
     try {
         const { categoria } = req.params
@@ -42,6 +59,13 @@ async function searchByCategory(req, res, next) {
     }
 }
 
+/**
+ * Reindexa todos los productos desde la BD hacia Elasticsearch.
+ * Útil para sincronización inicial o tras cambios masivos en productos.
+ * @param {import("express").Request} req
+ * @param {import("express").Response} res
+ * @param {import("express").NextFunction} next
+ */
 async function reindex(req, res, next) {
     try {
         const products = await productDataSource.getProducts()

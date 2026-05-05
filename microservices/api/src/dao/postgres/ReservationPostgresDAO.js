@@ -1,8 +1,18 @@
+/**
+ * @fileoverview DAO de reservaciones para PostgreSQL.
+ * Usa JOINs para enriquecer resultados con nombres de usuario y restaurante.
+ */
+
 const pool = require("../../config/database")
 const IReservationDAO = require("../interfaces/IReservationDAO")
 
 class ReservationPostgresDAO extends IReservationDAO {
 
+    /**
+     * Busca una reservación por ID con nombres de guest y restaurante.
+     * @param {string|number} id
+     * @returns {Promise<Object|null>}
+     */
     async getById(id) {
         const result = await pool.query(
             `SELECT r.*, u.name AS guest, res.name AS restaurant
@@ -15,6 +25,10 @@ class ReservationPostgresDAO extends IReservationDAO {
         return result.rows[0]
     }
 
+    /**
+     * Obtiene todas las reservaciones activas con datos enriquecidos.
+     * @returns {Promise<Array>}
+     */
     async getAll() {
         const result = await pool.query(
             `SELECT r.*, u.name AS guest, res.name AS restaurant
@@ -27,6 +41,16 @@ class ReservationPostgresDAO extends IReservationDAO {
         return result.rows
     }
 
+    /**
+     * Crea una nueva reservación.
+     * @param {Object} data
+     * @param {string|number} data.userId
+     * @param {string|number} data.restaurantId
+     * @param {number} data.partySize
+     * @param {string|Date} data.reservationDate
+     * @param {string} [data.notes]
+     * @returns {Promise<Object>}
+     */
     async create({ userId, restaurantId, partySize, reservationDate, notes }) {
         const result = await pool.query(
             `INSERT INTO reservations (user_id, restaurant_id, party_size, reservation_date, notes)
@@ -37,6 +61,15 @@ class ReservationPostgresDAO extends IReservationDAO {
         return result.rows[0]
     }
 
+    /**
+     * Actualiza datos de una reservación existente.
+     * @param {string|number} id
+     * @param {Object} data
+     * @param {number} data.partySize
+     * @param {string|Date} data.reservationDate
+     * @param {string} data.notes
+     * @returns {Promise<Object|null>}
+     */
     async update(id, { partySize, reservationDate, notes }) {
         const result = await pool.query(
             `UPDATE reservations
@@ -50,6 +83,11 @@ class ReservationPostgresDAO extends IReservationDAO {
         return result.rows[0]
     }
 
+    /**
+     * Cancela una reservación cambiando su estado a 'cancelled'.
+     * @param {string|number} id
+     * @returns {Promise<Object|null>}
+     */
     async cancel(id) {
         const result = await pool.query(
             `UPDATE reservations

@@ -1,4 +1,3 @@
-// tests/helpers/integrationHelper.js
 const express = require("express")
 const request = require("supertest")
 
@@ -10,7 +9,6 @@ function createTestApp(routePath, routeModule) {
     const app = express()
     app.use(express.json())
 
-    // Mock de middlewares de auth ANTES de cargar routes
     jest.doMock("../../src/middlewares/keycloakProtect", () => {
         return () => (req, res, next) => next()
     })
@@ -39,7 +37,6 @@ function createTestApp(routePath, routeModule) {
         return () => (req, res, next) => next()
     })
 
-    // Mock de cache middlewares
     jest.doMock("../../src/middlewares/cache", () => ({
         cache: () => (req, res, next) => next(),
         invalidateCache: jest.fn(),
@@ -48,7 +45,6 @@ function createTestApp(routePath, routeModule) {
 
     app.use(routePath, routeModule)
 
-    // Error handler mínimo
     app.use((err, req, res, next) => {
         console.error(err)
         res.status(err.statusCode || 500).json({ error: err.message || "Internal server error" })

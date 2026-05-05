@@ -1,6 +1,17 @@
-const keycloakService = require("../services/keycloakService")
-const { BadRequestError, AppError } = require("../errors")  // ← Agregué AppError
+/**
+ * @fileoverview Controlador de autenticación. Gestiona login y registro de usuarios via Keycloak.
+ * Delega la lógica de negocio a keycloakService.
+ */
 
+const keycloakService = require("../services/keycloakService")
+const { BadRequestError, AppError } = require("../errors")  
+
+/**
+ * Autentica un usuario con username y password contra Keycloak.
+ * @param {import("express").Request} req
+ * @param {import("express").Response} res
+ * @param {import("express").NextFunction} next
+ */
 async function login(req, res, next) {
     try {
         const { username, password } = req.body
@@ -21,6 +32,12 @@ async function login(req, res, next) {
     }
 }
 
+/**
+ * Registra un nuevo usuario en Keycloak con rol por defecto "user".
+ * @param {import("express").Request} req
+ * @param {import("express").Response} res
+ * @param {import("express").NextFunction} next
+ */
 async function register(req, res, next) {
     try {
         const { username, email, password, role } = req.body

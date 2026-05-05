@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Punto de entrada del servidor.
+ * Verifica conexión a base de datos, ejecuta inicialización de esquemas y levanta el servidor HTTP.
+ */
+
 require("dotenv").config()
 const app = require("./app")
 const initDatabase = require("./database/init")
@@ -7,6 +12,10 @@ const DB_TYPE = process.env.DB_TYPE || "postgres"
 
 console.log("DB_TYPE:", process.env.DB_TYPE)
 
+/**
+ * Inicia el servidor verificando conectividad e inicializando la base de datos.
+ * @returns {Promise<void>}
+ */
 async function startServer() {
     try {
         if (DB_TYPE === "postgres") {

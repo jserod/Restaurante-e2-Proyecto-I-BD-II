@@ -1,4 +1,3 @@
-// tests/unit/controllers/ordersController.test.js
 const { createMockReq, createMockRes, createMockNext } = require("../../helpers/mockExpress")
 
 describe("ordersController", () => {

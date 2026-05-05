@@ -1,8 +1,14 @@
+/**
+ * @fileoverview Middleware de caching con Redis para el microservicio de búsqueda.
+ * Replica la funcionalidad del API principal para consistencia entre servicios.
+ */
+
 const { client, connectRedis } = require("../config/redis")
 
 /**
- * Middleware que cachea respuestas GET en Redis
- * @param {number} ttlSeconds - Tiempo de vida en segundos
+ * Cachea respuestas GET en Redis con TTL configurable.
+ * @param {number} [ttlSeconds=60] - Tiempo de vida en segundos
+ * @returns {Function} Middleware de Express
  */
 function cache(ttlSeconds = 60) {
     return async (req, res, next) => {
@@ -22,7 +28,6 @@ function cache(ttlSeconds = 60) {
                 return res.json(JSON.parse(cached))
             }
 
-            // Interceptar res.json para guardar en caché
             const originalJson = res.json.bind(res)
             res.json = (data) => {
                 client.setEx(key, ttlSeconds, JSON.stringify(data))
@@ -41,8 +46,9 @@ function cache(ttlSeconds = 60) {
 }
 
 /**
- * Invalida claves de caché por patrón
- * @param {string} pattern - Patrón de claves a borrar, ej: "cache:GET:/products*"
+ * Elimina claves de caché que coincidan con un patrón.
+ * @param {string} pattern - Patrón de claves a borrar
+ * @returns {Promise<void>}
  */
 async function invalidateCache(pattern) {
     try {
@@ -58,8 +64,9 @@ async function invalidateCache(pattern) {
 }
 
 /**
- * Si hubo respuesta exitosa, llama invalidar claves de caché por patrón
- * @param {string} pattern - Patrón de claves a borrar, ej: "cache:GET:/products*"
+ * Invalida caché automáticamente tras respuesta exitosa.
+ * @param {string} pattern - Patrón de claves a invalidar
+ * @returns {Function} Middleware de Express
  */
 function invalidateOnSuccess(pattern) {
     return async (req, res, next) => {

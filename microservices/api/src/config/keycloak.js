@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Configuración de Keycloak con sesiones en memoria.
+ * Sobrescribe protect() para usar middleware de autorización personalizado.
+ */
+
 const Keycloak = require("keycloak-connect")
 const session = require("express-session")
 

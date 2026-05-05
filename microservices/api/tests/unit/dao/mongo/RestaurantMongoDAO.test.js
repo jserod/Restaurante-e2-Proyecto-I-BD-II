@@ -1,4 +1,3 @@
-// tests/unit/dao/mongo/RestaurantMongoDAO.test.js
 const { createMockCollection, createMockDb, createMockGetDb } = require("../../../helpers/mockMongo")
 
 describe("RestaurantMongoDAO", () => {
@@ -93,7 +92,6 @@ describe("RestaurantMongoDAO", () => {
             )
         })
 
-        // NUEVO: cubre línea 38 (if (address) ...)
         it("actualiza address", async () => {
             const updated = { _id: "507f1f77bcf86cd799439011", address: "Calle 2" }
             mockCollection.findOneAndUpdate.mockResolvedValue(updated)
@@ -109,7 +107,6 @@ describe("RestaurantMongoDAO", () => {
             expect(result).toEqual(updated)
         })
 
-        // NUEVO: cubre rama false de línea 36 (if (name) ...)
         it("actualiza sin pasar name", async () => {
             mockCollection.findOneAndUpdate.mockResolvedValue({})
 

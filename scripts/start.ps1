@@ -6,8 +6,8 @@ docker compose down --remove-orphans --volumes 2>$null | Out-Null
 Write-Host "=== Iniciando infraestructura ===" -ForegroundColor Green
 docker compose up -d
 
-Write-Host "`n=== Esperando servicios (30s) ===" -ForegroundColor Yellow
-Start-Sleep -Seconds 30
+Write-Host "`n=== Esperando servicios (60s) ===" -ForegroundColor Yellow
+Start-Sleep -Seconds 60
 
 Write-Host "`n=== Escalando API y Search ===" -ForegroundColor Green
 docker compose up -d --scale api=3 --scale search-service=2

@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Configuración del cliente Elasticsearch.
+ * Crea el índice "products" con mappings apropiados si no existe.
+ */
+
 const { Client } = require("@elastic/elasticsearch")
 
 const client = new Client({
@@ -6,6 +11,10 @@ const client = new Client({
 
 const INDEX = "products"
 
+/**
+ * Verifica y crea el índice de productos con mappings definidos.
+ * @returns {Promise<void>}
+ */
 async function ensureIndex() {
     const exists = await client.indices.exists({ index: INDEX })
     if (!exists) {

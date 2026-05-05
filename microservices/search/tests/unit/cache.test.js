@@ -54,7 +54,6 @@ describe("Cache Middleware", () => {
 
             expect(next).toHaveBeenCalled()
 
-            // Simular respuesta - ahora setEx retorna Promise
             const responseData = { data: "fresh" }
             res.json(responseData)
 
@@ -83,7 +82,6 @@ describe("Cache Middleware", () => {
 
             expect(next).toHaveBeenCalled()
 
-            // No debería lanzar error, solo loguearlo
             const responseData = { data: "test" }
             expect(() => res.json(responseData)).not.toThrow()
         })
@@ -91,7 +89,7 @@ describe("Cache Middleware", () => {
         test("usa TTL por defecto de 60 segundos", async () => {
             client.get.mockResolvedValue(null)
 
-            const middleware = cache() // sin argumentos
+            const middleware = cache() 
             await middleware(req, res, next)
 
             expect(next).toHaveBeenCalled()
@@ -134,10 +132,8 @@ describe("Cache Middleware", () => {
 
             expect(next).toHaveBeenCalled()
 
-            // Simular respuesta exitosa
             res.json({ success: true })
 
-            // Esperar a que la promesa de invalidateCache se resuelva
             await new Promise(resolve => setImmediate(resolve))
 
             expect(client.keys).toHaveBeenCalledWith("cache:GET:/products*")

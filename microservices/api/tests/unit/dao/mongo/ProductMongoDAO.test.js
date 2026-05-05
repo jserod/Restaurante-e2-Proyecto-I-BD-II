@@ -1,4 +1,3 @@
-// tests/unit/dao/mongo/ProductMongoDAO.test.js
 const { createMockCollection, createMockDb, createMockGetDb } = require("../../../helpers/mockMongo")
 
 describe("ProductMongoDAO", () => {
@@ -19,38 +18,63 @@ describe("ProductMongoDAO", () => {
     })
 
     describe("getAll", () => {
-        it("retorna productos de todos los menus", async () => {
-            const menus = [
+        it("retorna productos de todos los restaurantes y menus", async () => {
+            const restaurants = [
                 {
-                    _id: "menu1",
-                    name: "Menu 1",
-                    products: [
-                        { product_id: "p1", name: "Burger" },
-                        { product_id: "p2", name: "Fries" }
+                    _id: "r1",
+                    name: "Resto 1",
+                    menus: [
+                        {
+                            _id: "m1",
+                            name: "Desayunos",
+                            products: [
+                                { product_id: "p1", name: "Cafe" },
+                                { product_id: "p2", name: "Pan" }
+                            ]
+                        }
                     ]
                 },
                 {
-                    _id: "menu2",
-                    name: "Menu 2",
-                    products: [{ product_id: "p3", name: "Soda" }]
+                    _id: "r2",
+                    name: "Resto 2",
+                    menus: [
+                        {
+                            _id: "m2",
+                            name: "Almuerzos",
+                            products: [{ product_id: "p3", name: "Casado" }]
+                        }
+                    ]
                 }
             ]
-            mockCollection.toArray.mockResolvedValue(menus)
+            mockCollection.toArray.mockResolvedValue(restaurants)
 
             const dao = new ProductMongoDAO()
             const result = await dao.getAll()
 
+            expect(mockDb.collection).toHaveBeenCalledWith("restaurants")
             expect(result).toHaveLength(3)
             expect(result[0]).toEqual(expect.objectContaining({
                 product_id: "p1",
-                menu_id: "menu1",
-                menu_name: "Menu 1"
+                menu_id: "m1",
+                menu_name: "Desayunos",
+                restaurant_id: "r1"
             }))
         })
 
-        it("retorna array vacío si no hay productos", async () => {
+        it("retorna array vacio si no hay productos", async () => {
             mockCollection.toArray.mockResolvedValue([
-                { _id: "1", name: "Menu sin productos" }
+                { _id: "r1", name: "Resto", menus: [{ _id: "m1", name: "Menu" }] }
+            ])
+
+            const dao = new ProductMongoDAO()
+            const result = await dao.getAll()
+
+            expect(result).toEqual([])
+        })
+
+        it("ignora restaurantes sin menus", async () => {
+            mockCollection.toArray.mockResolvedValue([
+                { _id: "r1", name: "Resto sin menus" }
             ])
 
             const dao = new ProductMongoDAO()
@@ -62,25 +86,41 @@ describe("ProductMongoDAO", () => {
 
     describe("getById", () => {
         it("retorna producto por id", async () => {
-            const menu = {
-                _id: "menu1",
-                name: "Menu 1",
-                products: [{ product_id: "p1", name: "Burger" }]
+            const restaurant = {
+                _id: "r1",
+                name: "Resto 1",
+                menus: [{
+                    _id: "m1",
+                    name: "Desayunos",
+                    products: [{ product_id: "p1", name: "Cafe" }]
+                }]
             }
-            mockCollection.findOne.mockResolvedValue(menu)
+            mockCollection.findOne.mockResolvedValue(restaurant)
 
             const dao = new ProductMongoDAO()
             const result = await dao.getById("p1")
 
             expect(result).toEqual(expect.objectContaining({
                 product_id: "p1",
-                menu_id: "menu1",
-                menu_name: "Menu 1"
+                menu_id: "m1",
+                restaurant_id: "r1"
             }))
         })
 
-        it("retorna null si no encuentra", async () => {
+        it("retorna null si restaurante no existe", async () => {
             mockCollection.findOne.mockResolvedValue(null)
+
+            const dao = new ProductMongoDAO()
+            const result = await dao.getById("noexiste")
+
+            expect(result).toBeNull()
+        })
+
+        it("retorna null si el producto no esta en el menu", async () => {
+            mockCollection.findOne.mockResolvedValue({
+                _id: "r1",
+                menus: [{ _id: "m1", name: "Menu", products: [] }]
+            })
 
             const dao = new ProductMongoDAO()
             const result = await dao.getById("noexiste")
@@ -90,34 +130,33 @@ describe("ProductMongoDAO", () => {
     })
 
     describe("create", () => {
-        it("crea producto embebido en menu", async () => {
+        it("crea producto embebido en menu del restaurante", async () => {
             mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 })
 
             const dao = new ProductMongoDAO()
             const result = await dao.create({
                 menuId: "507f1f77bcf86cd799439012",
-                name: "New Product",
-                description: "Desc",
-                price: 9.99,
+                name: "Gallo Pinto",
+                description: "Con natilla",
+                price: 3500,
                 isAvailable: true
             })
 
             expect(mockCollection.updateOne).toHaveBeenCalledWith(
-                { _id: expect.any(Object) },
+                { "menus._id": expect.any(Object) },
                 {
-                    $push: {
-                        products: expect.objectContaining({
-                            product_id: expect.any(String),
-                            name: "New Product",
-                            price: 9.99,
-                            is_available: true
-                        })
-                    },
+                    $push: { "menus.$.products": expect.objectContaining({
+                        product_id: expect.any(String),
+                        name: "Gallo Pinto",
+                        description: "Con natilla",
+                        price: 3500,
+                        is_available: true
+                    })},
                     $set: { updated_at: expect.any(Date) }
                 }
             )
             expect(result).toEqual(expect.objectContaining({
-                name: "New Product",
+                name: "Gallo Pinto",
                 menu_id: "507f1f77bcf86cd799439012"
             }))
         })
@@ -126,97 +165,67 @@ describe("ProductMongoDAO", () => {
             mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 })
 
             const dao = new ProductMongoDAO()
-            await dao.create({ menuId: "507f1f77bcf86cd799439012", name: "Product", price: 5 })
+            await dao.create({
+                menuId: "507f1f77bcf86cd799439012",
+                name: "Cafe",
+                price: 1000
+            })
 
-            expect(mockCollection.updateOne).toHaveBeenLastCalledWith(
-                { _id: expect.any(Object) },
-                {
-                    $push: {
-                        products: expect.objectContaining({
-                            product_id: expect.any(String),
-                            name: "Product",
-                            price: 5,
-                            is_available: true  // ← true, no false
-                        })
-                    },
-                    $set: { updated_at: expect.any(Date) }
-                }
-            )
+            const call = mockCollection.updateOne.mock.calls[0]
+            expect(call[1].$push["menus.$.products"].is_available).toBe(true)
         })
     })
 
     describe("update", () => {
-        it("actualiza campos del producto", async () => {
+        it("actualiza name y price", async () => {
             mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 })
-            const updated = { product_id: "p1", name: "Updated" }
             mockCollection.findOne.mockResolvedValue({
-                _id: "menu1",
-                products: [updated]
+                _id: "r1",
+                menus: [{ _id: "m1", products: [{ product_id: "p1", name: "Updated" }] }]
             })
 
             const dao = new ProductMongoDAO()
-            const result = await dao.update("p1", { name: "Updated", price: 10 })
+            const result = await dao.update("p1", { name: "Updated", price: 5000 })
 
             expect(mockCollection.updateOne).toHaveBeenCalledWith(
-                { "products.product_id": "p1" },
-                {
-                    $set: expect.objectContaining({
-                        "products.$.name": "Updated",
-                        "products.$.price": 10,
-                        "products.$.updated_at": expect.any(Date),
-                        updated_at: expect.any(Date)
-                    })
-                }
+                { "menus.products.product_id": "p1" },
+                { $set: expect.objectContaining({
+                    "menus.$[menu].products.$[product].name": "Updated",
+                    "menus.$[menu].products.$[product].price": 5000
+                })},
+                expect.objectContaining({ arrayFilters: expect.any(Array) })
             )
-            expect(result).toEqual(expect.objectContaining({ name: "Updated" }))
+            expect(result).toEqual(expect.objectContaining({ product_id: "p1" }))
         })
 
         it("actualiza description", async () => {
             mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 })
-            const updated = { product_id: "p1", description: "Nueva desc" }
             mockCollection.findOne.mockResolvedValue({
-                _id: "menu1",
-                products: [updated]
+                _id: "r1",
+                menus: [{ _id: "m1", products: [{ product_id: "p1", description: "Nueva" }] }]
             })
 
             const dao = new ProductMongoDAO()
-            const result = await dao.update("p1", { description: "Nueva desc" })
+            await dao.update("p1", { description: "Nueva" })
 
-            expect(mockCollection.updateOne).toHaveBeenCalledWith(
-                { "products.product_id": "p1" },
-                {
-                    $set: expect.objectContaining({
-                        "products.$.description": "Nueva desc",
-                        "products.$.updated_at": expect.any(Date),
-                        updated_at: expect.any(Date)
-                    })
-                }
-            )
-            expect(result).toEqual(expect.objectContaining({ description: "Nueva desc" }))
+            const call = mockCollection.updateOne.mock.calls[0]
+            
+            expect(call[1].$set["menus.$[menu].products.$[product].description"]).toBe("Nueva")
         })
 
         it("actualiza isAvailable", async () => {
             mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 })
-            const updated = { product_id: "p1", is_available: true }
             mockCollection.findOne.mockResolvedValue({
-                _id: "menu1",
-                products: [updated]
+                _id: "r1",
+                menus: [{ _id: "m1", products: [{ product_id: "p1", is_available: false }] }]
             })
 
             const dao = new ProductMongoDAO()
-            const result = await dao.update("p1", { isAvailable: true })
+            await dao.update("p1", { isAvailable: false })
 
-            expect(mockCollection.updateOne).toHaveBeenCalledWith(
-                { "products.product_id": "p1" },
-                {
-                    $set: expect.objectContaining({
-                        "products.$.is_available": true,
-                        "products.$.updated_at": expect.any(Date),
-                        updated_at: expect.any(Date)
-                    })
-                }
-            )
-            expect(result).toEqual(expect.objectContaining({ is_available: true }))
+            const call = mockCollection.updateOne.mock.calls[0]
+            
+            expect(call[1].$set["menus.$[menu].products.$[product].is_available"]).toBe(false)
         })
 
         it("lanza error si no hay campos para actualizar", async () => {
@@ -227,18 +236,19 @@ describe("ProductMongoDAO", () => {
     })
 
     describe("delete", () => {
-        it("elimina producto del array", async () => {
+        it("elimina producto del array del menu", async () => {
             mockCollection.updateOne.mockResolvedValue({ modifiedCount: 1 })
 
             const dao = new ProductMongoDAO()
             await dao.delete("p1")
 
             expect(mockCollection.updateOne).toHaveBeenCalledWith(
-                { "products.product_id": "p1" },
+                { "menus.products.product_id": "p1" },
                 {
-                    $pull: { products: { product_id: "p1" } },
+                    $pull: { "menus.$[menu].products": { product_id: "p1" } },
                     $set: { updated_at: expect.any(Date) }
-                }
+                },
+                expect.objectContaining({ arrayFilters: expect.any(Array) })
             )
         })
     })

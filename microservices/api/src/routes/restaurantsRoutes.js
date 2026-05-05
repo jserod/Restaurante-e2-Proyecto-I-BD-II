@@ -4,6 +4,7 @@ const router = express.Router()
 const protect = require("../middlewares/keycloakProtect")
 const requireRole = require("../middlewares/requireRole")
 const attachUser = require("../middlewares/attachUser")
+const { cache, invalidateOnSuccess } = require("../middlewares/cache")
 
 const controller = require("../controllers/restaurantsController")
 
@@ -21,7 +22,7 @@ const controller = require("../controllers/restaurantsController")
  *       401:
  *         description: No autorizado
  */
-router.get("/", protect(), attachUser, controller.getRestaurants)
+router.get("/", protect(), attachUser, cache(300), controller.getRestaurants)
 
 /**
  * @swagger
@@ -43,7 +44,7 @@ router.get("/", protect(), attachUser, controller.getRestaurants)
  *       404:
  *         description: Restaurante no encontrado
  */
-router.get("/:id", protect(), attachUser, controller.getRestaurantById)
+router.get("/:id", protect(), attachUser, cache(300), controller.getRestaurantById)
 
 /**
  * @swagger
@@ -77,7 +78,10 @@ router.get("/:id", protect(), attachUser, controller.getRestaurantById)
  *       403:
  *         description: No tiene permisos de administrador
  */
-router.post("/", protect(), attachUser, requireRole("admin"), controller.createRestaurant)
+router.post("/", protect(), attachUser, requireRole("admin"), async (req, res, next) => {
+    await controller.createRestaurant(req, res, next)
+    await invalidateOnSuccess("cache:GET:/restaurants*")
+})
 
 /**
  * @swagger
@@ -116,7 +120,10 @@ router.post("/", protect(), attachUser, requireRole("admin"), controller.createR
  *       404:
  *         description: Restaurante no encontrado
  */
-router.put("/:id", protect(), attachUser, requireRole("admin"), controller.updateRestaurant)
+router.put("/:id", protect(), attachUser, requireRole("admin"), async (req, res, next) => {
+    await controller.updateRestaurant(req, res, next)
+    await invalidateOnSuccess("cache:GET:/restaurants*")
+})
 
 /**
  * @swagger
@@ -142,6 +149,9 @@ router.put("/:id", protect(), attachUser, requireRole("admin"), controller.updat
  *       404:
  *         description: Restaurante no encontrado
  */
-router.delete("/:id", protect(), attachUser, requireRole("admin"), controller.deleteRestaurant)
+router.delete("/:id", protect(), attachUser, requireRole("admin"), async (req, res, next) => {
+    await controller.deleteRestaurant(req, res, next)
+    await invalidateOnSuccess("cache:GET:/restaurants*")
+})
 
 module.exports = router

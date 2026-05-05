@@ -1,5 +1,15 @@
+/**
+ * @fileoverview Inicialización de PostgreSQL.
+ * Crea todas las tablas con sus relaciones, constraints e índices implícitos (PRIMARY KEY, FOREIGN KEY).
+ */
+
 const pool = require("../config/database")
 
+/**
+ * Ejecuta el script para crear tablas si no existen.
+ * @returns {Promise<void>}
+ * @throws {Error} Si falla la ejecución del SQL
+ */
 async function initPostgres() {
     try {
         console.log("Initializing database...")

@@ -1,4 +1,3 @@
-// tests/integration/reservationsRoutes.test.js
 const request = require("supertest")
 const express = require("express")
 const { NotFoundError, ForbiddenError } = require("../../src/errors")
@@ -18,14 +17,12 @@ describe("Reservations Routes", () => {
             cancel: jest.fn()
         }
 
-        // Mock del service ANTES de cargar el controller
         jest.doMock("../../src/services/reservationService", () => mockReservationService)
 
-        // Mock de middlewares de auth
         jest.doMock("../../src/middlewares/keycloakProtect", () => {
             return () => (req, res, next) => next()
         })
-        
+
         jest.doMock("../../src/middlewares/attachUser", () => {
             return (req, res, next) => {
                 req.user = { id: "test-user-id", dbId: "test-db-id" }
@@ -34,12 +31,11 @@ describe("Reservations Routes", () => {
         })
 
         const reservationsRoutes = require("../../src/routes/reservationsRoutes")
-        
+
         app = express()
         app.use(express.json())
         app.use("/reservations", reservationsRoutes)
-        
-        // Error handler
+
         app.use((err, req, res, next) => {
             res.status(err.statusCode || 500).json({ error: err.message })
         })
@@ -143,7 +139,7 @@ describe("Reservations Routes", () => {
                 partySize: 6,
                 reservationDate: undefined,
                 notes: "Nota actualizada"
-            })
+            }, "test-db-id")  
         })
 
         it("retorna 404 si no existe", async () => {
@@ -154,6 +150,17 @@ describe("Reservations Routes", () => {
                 .send({ partySize: 6 })
 
             expect(res.status).toBe(404)
+        })
+
+        it("retorna 403 si no es del usuario", async () => {
+            mockReservationService.update.mockRejectedValue(new ForbiddenError("You can only update your own reservations"))
+
+            const res = await request(app)
+                .put("/reservations/1")
+                .send({ partySize: 6 })
+
+            expect(res.status).toBe(403)
+            expect(res.body.error).toBe("You can only update your own reservations")
         })
     })
 

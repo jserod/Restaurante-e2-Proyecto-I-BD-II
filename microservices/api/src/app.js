@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Configuración principal de Express.
+ * Orquesta middlewares globales, sesiones, Keycloak, Swagger, rutas y manejo de errores.
+ */
+
 require("dotenv").config()
 
 const express = require("express")
@@ -53,7 +58,7 @@ app.get("/_host", (req, res) => {
 })
 
 /* ========================
-   SWAGGER (ANTES de Keycloak)
+   SWAGGER 
 ======================== */
 
 app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
@@ -67,7 +72,7 @@ app.get("/api/openapi.json", (req, res) => {
 })
 
 /* ========================
-   HEALTH CHECK (ANTES de Keycloak)
+   HEALTH CHECK 
 ======================== */
 
 app.get("/health", (req, res) => {
@@ -89,7 +94,7 @@ app.use("/auth", authRoutes)
 app.use(keycloak.middleware())
 
 /* ========================
-   ROUTES (PROTEGIDAS por Keycloak)
+   ROUTES 
 ======================== */
 
 app.use("/users", usersRoutes)

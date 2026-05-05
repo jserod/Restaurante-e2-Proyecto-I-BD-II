@@ -1,6 +1,16 @@
+/**
+ * @fileoverview Controlador de órdenes. Gestiona pedidos asociados a usuarios, restaurantes y reservas.
+ */
+
 const orderService = require("../services/orderService")
 const { BadRequestError } = require("../errors")
 
+/**
+ * Crea una nueva orden para el usuario autenticado.
+ * @param {import("express").Request} req
+ * @param {import("express").Response} res
+ * @param {import("express").NextFunction} next
+ */
 async function createOrder(req, res, next) {
     try {
         const { restaurantId, reservationId, pickup, items } = req.body
@@ -22,6 +32,12 @@ async function createOrder(req, res, next) {
     }
 }
 
+/**
+ * Obtiene una orden por su ID.
+ * @param {import("express").Request} req
+ * @param {import("express").Response} res
+ * @param {import("express").NextFunction} next
+ */
 async function getOrderById(req, res, next) {
     try {
         const order = await orderService.getById(req.params.id) // lanza NotFound si no existe
@@ -31,6 +47,12 @@ async function getOrderById(req, res, next) {
     }
 }
 
+/**
+ * Obtiene todas las órdenes del sistema.
+ * @param {import("express").Request} req
+ * @param {import("express").Response} res
+ * @param {import("express").NextFunction} next
+ */
 async function getAllOrders(req, res, next) {
     try {
         const orders = await orderService.getAll()
@@ -40,6 +62,12 @@ async function getAllOrders(req, res, next) {
     }
 }
 
+/**
+ * Actualiza el estado de una orden.
+ * @param {import("express").Request} req
+ * @param {import("express").Response} res
+ * @param {import("express").NextFunction} next
+ */
 async function updateOrder(req, res, next) {
     try {
         const { status } = req.body
@@ -50,6 +78,12 @@ async function updateOrder(req, res, next) {
     }
 }
 
+/**
+ * Elimina una orden por su ID.
+ * @param {import("express").Request} req
+ * @param {import("express").Response} res
+ * @param {import("express").NextFunction} next
+ */
 async function deleteOrder(req, res, next) {
     try {
         await orderService.delete(req.params.id)

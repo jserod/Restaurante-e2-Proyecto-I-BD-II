@@ -8,7 +8,6 @@ function createMockCollection() {
         deleteOne: jest.fn(),
         sort: jest.fn().mockReturnThis(),
         toArray: jest.fn(),
-        // Para $push/$pull
         aggregate: jest.fn().mockReturnThis()
     }
 }

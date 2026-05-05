@@ -1,8 +1,19 @@
+/**
+ * @fileoverview Middleware de autenticación JWT manual para Keycloak.
+ * Reemplaza el protect() nativo de keycloak-connect que presentaba problemas de compatibilidad.
+ * Valida tokens RS256 contra las claves públicas del realm.
+ */
+
 const jwt = require("jsonwebtoken")
 const { createPublicKey } = require("crypto")
 const keycloakService = require("../services/keycloakService")
 
-function keycloakProtectFactory() { //Para poder usar protect() porque el que viene con keycloak no me funciona sepa dios por que
+/**
+ * Factory que retorna middleware de validación JWT contra Keycloak.
+ * Verifica firma, expiración y estructura del token.
+ * @returns {Function} Middleware async de Express
+ */
+function keycloakProtectFactory() { 
     return async function (req, res, next) {
         const authHeader = req.headers.authorization
         if (!authHeader || !authHeader.startsWith("Bearer ")) {

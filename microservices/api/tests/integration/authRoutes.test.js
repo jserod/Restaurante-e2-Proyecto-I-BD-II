@@ -1,4 +1,3 @@
-// tests/integration/authRoutes.test.js
 const request = require("supertest")
 const express = require("express")
 
@@ -26,7 +25,6 @@ describe("Auth Routes", () => {
         app.use(express.json())
         app.use("/auth", authRoutes)
         
-        // Error handler
         app.use((err, req, res, next) => {
             res.status(err.statusCode || 500).json({ error: err.message })
         })

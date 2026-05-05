@@ -1,4 +1,3 @@
-// tests/unit/controllers/usersController.test.js
 const { createMockReq, createMockRes, createMockNext } = require("../../helpers/mockExpress")
 
 describe("usersController", () => {

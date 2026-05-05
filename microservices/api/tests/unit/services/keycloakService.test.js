@@ -1,5 +1,3 @@
-// tests/unit/services/keycloakService.test.js
-
 const {
     UnauthorizedError,
     NotFoundError,
@@ -54,7 +52,6 @@ describe("KeycloakService", () => {
         jest.clearAllMocks()
     })
 
-    // Helper: configura una única respuesta
     function setupResponse(statusCode, body) {
         mockResponse.statusCode = statusCode
         mockResponse.on.mockImplementation((event, callback) => {
@@ -63,7 +60,6 @@ describe("KeycloakService", () => {
         })
     }
 
-    // Helper: configura múltiples respuestas secuenciales
     function setupMultipleResponses(responses) {
         let callCount = 0
         mockHttp.request.mockImplementation((options, callback) => {

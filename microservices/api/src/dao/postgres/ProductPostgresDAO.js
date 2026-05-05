@@ -1,8 +1,17 @@
+/**
+ * @fileoverview DAO de productos para PostgreSQL.
+ * Los productos son tablas con foreign key a menús.
+ */
+
 const pool = require("../../config/database")
 const IProductDAO = require("../interfaces/IProductDAO")
 
 class ProductPostgresDAO extends IProductDAO {
 
+  /**
+   * Obtiene todos los productos con datos del menú asociado (JOIN).
+   * @returns {Promise<Array>}
+   */
   async getAll() {
     const result = await pool.query(
       `SELECT p.id, p.menu_id, p.name, p.description, p.price, p.is_available,
@@ -14,6 +23,11 @@ class ProductPostgresDAO extends IProductDAO {
     return result.rows
   }
 
+  /**
+   * Busca un producto por su ID con datos del menú.
+   * @param {string|number} id
+   * @returns {Promise<Object|null>}
+   */
   async getById(id) {
     const result = await pool.query(
       `SELECT p.id, p.menu_id, p.name, p.description, p.price, p.is_available,
@@ -26,6 +40,16 @@ class ProductPostgresDAO extends IProductDAO {
     return result.rows[0]
   }
 
+  /**
+   * Crea un nuevo producto asociado a un menú.
+   * @param {Object} data
+   * @param {string|number} data.menuId
+   * @param {string} data.name
+   * @param {string} [data.description]
+   * @param {number} data.price
+   * @param {boolean} [data.isAvailable=true]
+   * @returns {Promise<Object>}
+   */
   async create({ menuId, name, description, price, isAvailable }) {
     const result = await pool.query(
       `INSERT INTO products (menu_id, name, description, price, is_available)
@@ -36,6 +60,12 @@ class ProductPostgresDAO extends IProductDAO {
     return result.rows[0]
   }
 
+  /**
+   * Actualiza campos específicos de un producto (update parcial).
+   * @param {string|number} id
+   * @param {Object} data
+   * @returns {Promise<Object>}
+   */
   async update(id, data) {
     const fields = []
     const values = []
@@ -79,6 +109,11 @@ class ProductPostgresDAO extends IProductDAO {
     return result.rows[0]
   }
 
+  /**
+   * Elimina un producto por su ID.
+   * @param {string|number} id
+   * @returns {Promise<void>}
+   */
   async delete(id) {
     await pool.query(
       "DELETE FROM products WHERE id = $1",

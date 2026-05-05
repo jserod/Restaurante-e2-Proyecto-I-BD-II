@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Configuración Swagger. Escanea ../routes/*.js para generar docs automáticamente.
+ */
+
 const path = require("path")
 const swaggerJsdoc = require("swagger-jsdoc")
 

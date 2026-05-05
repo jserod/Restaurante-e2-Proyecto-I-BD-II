@@ -1,4 +1,3 @@
-// tests/integration/menusRoutes.test.js
 const request = require("supertest")
 const express = require("express")
 
@@ -18,10 +17,8 @@ describe("Menus Routes", () => {
             delete: jest.fn()
         }
 
-        // Mock del service ANTES de cargar el controller
         jest.doMock("../../src/services/menuService", () => mockMenuService)
 
-        // Mock de middlewares de auth
         jest.doMock("../../src/middlewares/keycloakProtect", () => {
             return () => (req, res, next) => next()
         })
@@ -30,7 +27,6 @@ describe("Menus Routes", () => {
             return () => (req, res, next) => next()
         })
 
-        // Mock de cache
         jest.doMock("../../src/middlewares/cache", () => ({
             cache: () => (req, res, next) => next(),
             invalidateCache: jest.fn(),
@@ -43,7 +39,6 @@ describe("Menus Routes", () => {
         app.use(express.json())
         app.use("/menus", menusRoutes)
         
-        // Error handler
         app.use((err, req, res, next) => {
             res.status(err.statusCode || 500).json({ error: err.message })
         })

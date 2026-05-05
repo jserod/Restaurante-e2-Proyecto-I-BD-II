@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Interfaz abstracta para DAO de órdenes.
+ * Define el contrato que deben implementar OrderPostgresDAO y OrderMongoDAO.
+ */
+
 class IOrderDAO {
     async getAll() {
         throw new Error("Method not implemented")

@@ -1,8 +1,19 @@
+/**
+ * @fileoverview DAO de órdenes para PostgreSQL.
+ * Las órdenes usan transacciones para mantener consistencia entre orders y order_items.
+ * Calcula el total sumando precios de productos.
+ */
+
 const pool = require("../../config/database")
 const IOrderDAO = require("../interfaces/IOrderDAO")
 
 class OrderPostgresDAO extends IOrderDAO {
 
+  /**
+   * Busca una orden por ID con sus ítems enriquecidos (JOIN con products).
+   * @param {string|number} id
+   * @returns {Promise<Object|null>}
+   */
   async getById(id) {
     const result = await pool.query(
       `SELECT o.*,
@@ -24,6 +35,10 @@ class OrderPostgresDAO extends IOrderDAO {
     return result.rows[0]
   }
 
+  /**
+   * Obtiene todas las órdenes con sus ítems enriquecidos.
+   * @returns {Promise<Array>}
+   */
   async getAll() {
     const result = await pool.query(
       `SELECT o.*,
@@ -44,6 +59,17 @@ class OrderPostgresDAO extends IOrderDAO {
     return result.rows
   }
 
+  /**
+   * Crea una orden dentro de una transacción.
+   * Valida existencia de productos y calcula el total automáticamente.
+   * @param {Object} data
+   * @param {string|number} data.userId
+   * @param {string|number} data.restaurantId
+   * @param {string|number} [data.reservationId]
+   * @param {boolean} [data.pickup=false]
+   * @param {Array<{productId, quantity}>} data.items
+   * @returns {Promise<Object>} Orden creada
+   */
   async create({ userId, restaurantId, reservationId, pickup, items }) {
     const client = await pool.connect()
 
@@ -98,6 +124,13 @@ class OrderPostgresDAO extends IOrderDAO {
     }
   }
 
+  /**
+   * Actualiza el estado de una orden.
+   * @param {string|number} id
+   * @param {Object} data
+   * @param {string} data.status
+   * @returns {Promise<Object|null>}
+   */
   async update(id, { status }) {
     const result = await pool.query(
       `UPDATE orders
@@ -109,6 +142,11 @@ class OrderPostgresDAO extends IOrderDAO {
     return result.rows[0]
   }
 
+  /**
+   * Elimina una orden por su ID.
+   * @param {string|number} id
+   * @returns {Promise<void>}
+   */
   async delete(id) {
     await pool.query(
       "DELETE FROM orders WHERE id = $1",

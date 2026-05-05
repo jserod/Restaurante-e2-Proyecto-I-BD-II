@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Interfaz abstracta para DAO de menús.
+ * Define el contrato que deben implementar MenuPostgresDAO y MenuMongoDAO.
+ */
+
 class IMenuDAO {
     async getAll() {
         throw new Error("Not implemented")

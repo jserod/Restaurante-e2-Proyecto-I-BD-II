@@ -1,5 +1,14 @@
+/**
+ * @fileoverview Inicialización de MongoDB.
+ * Crea índices optimizados para consultas frecuentes sobre documentos embebidos.
+ */
+
 const getDb = require("../config/database")
 
+/**
+ * Crea índices en todas las colecciones necesarias.
+ * @returns {Promise<void>}
+ */
 async function initMongo() {
     const db = await getDb()
 
@@ -9,15 +18,12 @@ async function initMongo() {
     await db.collection("users").createIndex({ email: 1 })
 
     await db.collection("restaurants").createIndex({ name: 1 })
-
-    await db.collection("menus").createIndex({ restaurant_id: 1 })
-    await db.collection("menus").createIndex({ category: 1 })
-    await db.collection("menus").createIndex(
-        { name: "text", description: "text" }
-    )
-
-    await db.collection("menus").createIndex({ "products.name": 1 })
-    await db.collection("menus").createIndex({ "products.tags": 1 })
+    // Índices para buscar menus/productos embebidos
+    await db.collection("restaurants").createIndex({ "menus._id": 1 })
+    await db.collection("restaurants").createIndex({ "menus.name": "text", "menus.description": "text" })
+    await db.collection("restaurants").createIndex({ "menus.products.name": 1 })
+    await db.collection("restaurants").createIndex({ "menus.products.tags": 1 })
+    await db.collection("restaurants").createIndex({ "menus.products.product_id": 1 })
 
     await db.collection("reservations").createIndex({ user_id: 1 })
     await db.collection("reservations").createIndex({ restaurant_id: 1 })

@@ -1,3 +1,13 @@
+/**
+ * @fileoverview Middleware de autorización basado en roles de Keycloak.
+ * Verifica roles a nivel de cliente (resource_access) y realm (realm_access).
+ */
+
+/**
+ * Factory que retorna middleware de control de acceso por rol.
+ * @param {string} role - Rol requerido para acceder al recurso
+ * @returns {Function} Middleware de Express
+ */
 function requireRole(role) {
   return (req, res, next) => {
     const token = req.kauth?.grant?.access_token?.content

@@ -1,9 +1,29 @@
 const ProductDataSource = require("../../src/productDataSource")
+
+
+jest.mock("mongodb", () => ({
+    MongoClient: jest.fn().mockImplementation(() => ({
+        connect: jest.fn().mockResolvedValue(),
+        db: jest.fn().mockReturnValue({
+            collection: jest.fn().mockReturnValue({
+                find: jest.fn().mockReturnValue({
+                    toArray: jest.fn()
+                })
+            })
+        }),
+        close: jest.fn().mockResolvedValue()
+    }))
+}))
+
+jest.mock("pg", () => ({
+    Pool: jest.fn().mockImplementation(() => ({
+        query: jest.fn(),
+        end: jest.fn().mockResolvedValue()
+    }))
+}))
+
 const { MongoClient } = require("mongodb")
 const { Pool } = require("pg")
-
-jest.mock("mongodb")
-jest.mock("pg")
 
 describe("ProductDataSource", () => {
     beforeEach(() => {
@@ -12,108 +32,82 @@ describe("ProductDataSource", () => {
     })
 
     describe("getFromMongo", () => {
-        test("extrae productos embebidos de menús", async () => {
-            const mockMenus = [
+        test("extrae productos embebidos de restaurants.menus.products", async () => {
+            const mockRestaurants = [
                 {
-                    _id: { toString: () => "menu123" },
-                    name: "Desayunos",
-                    restaurant_id: { toString: () => "rest456" },
-                    products: [
+                    _id: { toString: () => "rest456" },
+                    name: "Soda Típica",
+                    menus: [
                         {
-                            product_id: "prod1",
-                            name: "Café",
-                            description: "Café caliente",
-                            price: 2.5,
-                            is_available: true
+                            _id: { toString: () => "menu123" },
+                            name: "Desayunos",
+                            products: [
+                                {
+                                    product_id: "prod1",
+                                    name: "Café",
+                                    description: "Café caliente",
+                                    price: 2500,
+                                    is_available: true
+                                }
+                            ]
                         }
                     ]
                 }
             ]
 
-            const mockDb = {
-                collection: jest.fn().mockReturnValue({
-                    find: jest.fn().mockReturnValue({
-                        toArray: jest.fn().mockResolvedValue(mockMenus)
-                    })
-                })
-            }
-
-            const mockClient = {
+            const mockToArray = jest.fn().mockResolvedValue(mockRestaurants)
+            const mockFind = jest.fn().mockReturnValue({ toArray: mockToArray })
+            const mockCollection = jest.fn().mockReturnValue({ find: mockFind })
+            const mockDb = jest.fn().mockReturnValue({ collection: mockCollection })
+            
+            MongoClient.mockImplementation(() => ({
                 connect: jest.fn().mockResolvedValue(),
-                db: jest.fn().mockReturnValue(mockDb),
+                db: mockDb,
                 close: jest.fn().mockResolvedValue()
-            }
+            }))
 
-            MongoClient.mockImplementation(() => mockClient)
             process.env.MONGO_URI = "mongodb://localhost:27017"
             process.env.MONGO_DB_NAME = "test"
 
             const result = await ProductDataSource.getFromMongo()
 
+            expect(mockCollection).toHaveBeenCalledWith("restaurants")
+            expect(mockFind).toHaveBeenCalledWith(
+                { "menus.products": { $exists: true } },
+                { projection: { menus: 1, name: 1 } }
+            )
             expect(result).toHaveLength(1)
             expect(result[0]).toMatchObject({
                 id: "prod1",
                 name: "Café",
-                price: 2.5,
+                price: 2500,
                 isAvailable: true,
                 category: "desayunos",
                 menuId: "menu123",
-                restaurantId: "rest456"
+                restaurantId: "rest456",
+                restaurantName: "Soda Típica"
             })
         })
 
-        test("delega según DB_TYPE mongo", async () => {
-            process.env.DB_TYPE = "mongo"
-
-            const mockMenus = []
-            const mockDb = {
-                collection: jest.fn().mockReturnValue({
-                    find: jest.fn().mockReturnValue({
-                        toArray: jest.fn().mockResolvedValue(mockMenus)
-                    })
-                })
-            }
-            const mockClient = {
-                connect: jest.fn().mockResolvedValue(),
-                db: jest.fn().mockReturnValue(mockDb),
-                close: jest.fn().mockResolvedValue()
-            }
-
-            MongoClient.mockImplementation(() => mockClient)
-            process.env.MONGO_URI = "mongodb://localhost:27017"
-            process.env.MONGO_DB_NAME = "test"
-
-            const result = await ProductDataSource.getProducts()
-
-            expect(MongoClient).toHaveBeenCalled()
-            expect(result).toEqual([])
-        })
-
-        test("maneja menús sin productos", async () => {
-            const mockMenus = [
+        test("maneja restaurantes sin menus", async () => {
+            const mockRestaurants = [
                 {
-                    _id: { toString: () => "menu123" },
-                    name: "Vacío",
-                    restaurant_id: { toString: () => "rest456" },
-                    products: []
+                    _id: { toString: () => "rest789" },
+                    name: "Resto Sin Menus"
                 }
             ]
 
-            const mockDb = {
-                collection: jest.fn().mockReturnValue({
-                    find: jest.fn().mockReturnValue({
-                        toArray: jest.fn().mockResolvedValue(mockMenus)
-                    })
-                })
-            }
+            const mockToArray = jest.fn().mockResolvedValue(mockRestaurants)
+            const mockFind = jest.fn().mockReturnValue({ toArray: mockToArray })
+            const mockCollection = jest.fn().mockReturnValue({ find: mockFind })
+            const mockDb = jest.fn().mockReturnValue({ collection: mockCollection })
 
-            const mockClient = {
+            MongoClient.mockImplementation(() => ({
                 connect: jest.fn().mockResolvedValue(),
-                db: jest.fn().mockReturnValue(mockDb),
+                db: mockDb,
                 close: jest.fn().mockResolvedValue()
-            }
+            }))
 
-            MongoClient.mockImplementation(() => mockClient)
             process.env.MONGO_URI = "mongodb://localhost:27017"
             process.env.MONGO_DB_NAME = "test"
 
@@ -123,30 +117,30 @@ describe("ProductDataSource", () => {
         })
 
         test("maneja menús sin campo products", async () => {
-            const mockMenus = [
+            const mockRestaurants = [
                 {
-                    _id: { toString: () => "menu123" },
-                    name: "Sin products",
-                    restaurant_id: { toString: () => "rest456" }
-                    // No tiene campo products
+                    _id: { toString: () => "rest456" },
+                    name: "Test",
+                    menus: [
+                        {
+                            _id: { toString: () => "menu123" },
+                            name: "Sin products"
+                        }
+                    ]
                 }
             ]
 
-            const mockDb = {
-                collection: jest.fn().mockReturnValue({
-                    find: jest.fn().mockReturnValue({
-                        toArray: jest.fn().mockResolvedValue(mockMenus)
-                    })
-                })
-            }
+            const mockToArray = jest.fn().mockResolvedValue(mockRestaurants)
+            const mockFind = jest.fn().mockReturnValue({ toArray: mockToArray })
+            const mockCollection = jest.fn().mockReturnValue({ find: mockFind })
+            const mockDb = jest.fn().mockReturnValue({ collection: mockCollection })
 
-            const mockClient = {
+            MongoClient.mockImplementation(() => ({
                 connect: jest.fn().mockResolvedValue(),
-                db: jest.fn().mockReturnValue(mockDb),
+                db: mockDb,
                 close: jest.fn().mockResolvedValue()
-            }
+            }))
 
-            MongoClient.mockImplementation(() => mockClient)
             process.env.MONGO_URI = "mongodb://localhost:27017"
             process.env.MONGO_DB_NAME = "test"
 
@@ -155,78 +149,40 @@ describe("ProductDataSource", () => {
             expect(result).toHaveLength(0)
         })
 
-        test("maneja restaurant_id undefined en Mongo", async () => {
-            const mockMenus = [
+        test("usa descripción por defecto si es null", async () => {
+            const mockRestaurants = [
                 {
-                    _id: { toString: () => "menu123" },
+                    _id: { toString: () => "rest456" },
                     name: "Test",
-                    // sin restaurant_id
-                    products: [
+                    menus: [
                         {
-                            product_id: "prod1",
-                            name: "Item",
-                            description: "desc",
-                            price: 5.0,
-                            is_available: true
+                            _id: { toString: () => "menu123" },
+                            name: "Test",
+                            products: [
+                                {
+                                    product_id: "prod1",
+                                    name: "Item",
+                                    description: null,
+                                    price: 5000,
+                                    is_available: true
+                                }
+                            ]
                         }
                     ]
                 }
             ]
 
-            const mockDb = {
-                collection: jest.fn().mockReturnValue({
-                    find: jest.fn().mockReturnValue({
-                        toArray: jest.fn().mockResolvedValue(mockMenus)
-                    })
-                })
-            }
-            const mockClient = {
+            const mockToArray = jest.fn().mockResolvedValue(mockRestaurants)
+            const mockFind = jest.fn().mockReturnValue({ toArray: mockToArray })
+            const mockCollection = jest.fn().mockReturnValue({ find: mockFind })
+            const mockDb = jest.fn().mockReturnValue({ collection: mockCollection })
+
+            MongoClient.mockImplementation(() => ({
                 connect: jest.fn().mockResolvedValue(),
-                db: jest.fn().mockReturnValue(mockDb),
+                db: mockDb,
                 close: jest.fn().mockResolvedValue()
-            }
+            }))
 
-            MongoClient.mockImplementation(() => mockClient)
-            process.env.MONGO_URI = "mongodb://localhost:27017"
-            process.env.MONGO_DB_NAME = "test"
-
-            const result = await ProductDataSource.getFromMongo()
-
-            expect(result[0].restaurantId).toBe("")
-        })
-
-        test("usa descripción por defecto si es null en Mongo", async () => {
-            const mockMenus = [
-                {
-                    _id: { toString: () => "menu123" },
-                    name: "Test",
-                    restaurant_id: { toString: () => "rest456" },
-                    products: [
-                        {
-                            product_id: "prod1",
-                            name: "Item",
-                            description: null,
-                            price: 5.0,
-                            is_available: true
-                        }
-                    ]
-                }
-            ]
-
-            const mockDb = {
-                collection: jest.fn().mockReturnValue({
-                    find: jest.fn().mockReturnValue({
-                        toArray: jest.fn().mockResolvedValue(mockMenus)
-                    })
-                })
-            }
-            const mockClient = {
-                connect: jest.fn().mockResolvedValue(),
-                db: jest.fn().mockReturnValue(mockDb),
-                close: jest.fn().mockResolvedValue()
-            }
-
-            MongoClient.mockImplementation(() => mockClient)
             process.env.MONGO_URI = "mongodb://localhost:27017"
             process.env.MONGO_DB_NAME = "test"
 
@@ -243,7 +199,7 @@ describe("ProductDataSource", () => {
                     id: 1,
                     name: "Café",
                     description: "Café caliente",
-                    price: "2.50",
+                    price: "2500",
                     is_available: true,
                     menu_id: 10,
                     menu_name: "Desayunos",
@@ -251,12 +207,14 @@ describe("ProductDataSource", () => {
                 }
             ]
 
-            const mockPool = {
-                query: jest.fn().mockResolvedValue({ rows: mockRows }),
-                end: jest.fn().mockResolvedValue()
-            }
+            const mockQuery = jest.fn().mockResolvedValue({ rows: mockRows })
+            const mockEnd = jest.fn().mockResolvedValue()
 
-            Pool.mockImplementation(() => mockPool)
+            Pool.mockImplementation(() => ({
+                query: mockQuery,
+                end: mockEnd
+            }))
+
             process.env.DB_HOST = "localhost"
             process.env.DB_PORT = 5432
             process.env.DB_USER = "test"
@@ -265,11 +223,12 @@ describe("ProductDataSource", () => {
 
             const result = await ProductDataSource.getFromPostgres()
 
+            expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining("FROM products p"))
             expect(result).toHaveLength(1)
             expect(result[0]).toMatchObject({
                 id: "1",
                 name: "Café",
-                price: 2.5,
+                price: 2500,
                 isAvailable: true,
                 category: "desayunos",
                 menuId: "10",
@@ -283,7 +242,7 @@ describe("ProductDataSource", () => {
                     id: 1,
                     name: "Té",
                     description: null,
-                    price: "2.00",
+                    price: "2000",
                     is_available: true,
                     menu_id: 10,
                     menu_name: "Bebidas",
@@ -291,12 +250,11 @@ describe("ProductDataSource", () => {
                 }
             ]
 
-            const mockPool = {
+            Pool.mockImplementation(() => ({
                 query: jest.fn().mockResolvedValue({ rows: mockRows }),
                 end: jest.fn().mockResolvedValue()
-            }
+            }))
 
-            Pool.mockImplementation(() => mockPool)
             process.env.DB_HOST = "localhost"
             process.env.DB_PORT = 5432
             process.env.DB_USER = "test"
@@ -310,14 +268,38 @@ describe("ProductDataSource", () => {
     })
 
     describe("getProducts", () => {
-        test("delega según DB_TYPE postgres", async () => {
+        test("delega a getFromMongo cuando DB_TYPE=mongo", async () => {
+            process.env.DB_TYPE = "mongo"
+
+            const mockRestaurants = []
+            const mockToArray = jest.fn().mockResolvedValue(mockRestaurants)
+            const mockFind = jest.fn().mockReturnValue({ toArray: mockToArray })
+            const mockCollection = jest.fn().mockReturnValue({ find: mockFind })
+            const mockDb = jest.fn().mockReturnValue({ collection: mockCollection })
+
+            MongoClient.mockImplementation(() => ({
+                connect: jest.fn().mockResolvedValue(),
+                db: mockDb,
+                close: jest.fn().mockResolvedValue()
+            }))
+
+            process.env.MONGO_URI = "mongodb://localhost:27017"
+            process.env.MONGO_DB_NAME = "test"
+
+            const result = await ProductDataSource.getProducts()
+
+            expect(MongoClient).toHaveBeenCalled()
+            expect(result).toEqual([])
+        })
+
+        test("delega a getFromPostgres cuando DB_TYPE=postgres", async () => {
             process.env.DB_TYPE = "postgres"
 
-            const mockPool = {
+            Pool.mockImplementation(() => ({
                 query: jest.fn().mockResolvedValue({ rows: [] }),
                 end: jest.fn().mockResolvedValue()
-            }
-            Pool.mockImplementation(() => mockPool)
+            }))
+
             process.env.DB_HOST = "localhost"
             process.env.DB_PORT = 5432
             process.env.DB_USER = "test"
@@ -327,6 +309,27 @@ describe("ProductDataSource", () => {
             const result = await ProductDataSource.getProducts()
 
             expect(Pool).toHaveBeenCalled()
+            expect(result).toEqual([])
+        })
+
+        test("usa postgres por defecto si DB_TYPE no está definido", async () => {
+            delete process.env.DB_TYPE
+
+            Pool.mockImplementation(() => ({
+                query: jest.fn().mockResolvedValue({ rows: [] }),
+                end: jest.fn().mockResolvedValue()
+            }))
+
+            process.env.DB_HOST = "localhost"
+            process.env.DB_PORT = 5432
+            process.env.DB_USER = "test"
+            process.env.DB_PASSWORD = "test"
+            process.env.DB_NAME = "test"
+
+            const result = await ProductDataSource.getProducts()
+
+            expect(Pool).toHaveBeenCalled()
+            expect(result).toEqual([])
         })
 
         test("lanza error si DB_TYPE no es válido", async () => {
@@ -334,21 +337,5 @@ describe("ProductDataSource", () => {
 
             await expect(ProductDataSource.getProducts()).rejects.toThrow("Unsupported DB_TYPE")
         })
-
-        test("usa postgres por defecto si DB_TYPE no está definido", async () => {
-            delete process.env.DB_TYPE
-
-            const mockPool = {
-                query: jest.fn().mockResolvedValue({ rows: [] }),
-                end: jest.fn().mockResolvedValue()
-            }
-            Pool.mockImplementation(() => mockPool)
-
-            const result = await ProductDataSource.getProducts()
-
-            expect(Pool).toHaveBeenCalled()
-            expect(result).toEqual([])
-        })
     })
-
 })

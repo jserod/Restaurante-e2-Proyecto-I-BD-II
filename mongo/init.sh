@@ -117,7 +117,6 @@ echo "  Habilitando sharding en 'restaurant'..."
 mongosh --host mongo-router --port 27017 --quiet <<EOF
 sh.enableSharding("restaurant")
 
-sh.shardCollection("restaurant.menus", { "restaurant_id": "hashed" })
 sh.shardCollection("restaurant.reservations", { "user_id": "hashed" })
 sh.shardCollection("restaurant.orders", { "user_id": "hashed" })
 sh.shardCollection("restaurant.restaurants", { "_id": "hashed" })

@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Configuración Swagger/OpenAPI para el microservicio de búsqueda.
+ */
+
 const swaggerJsdoc = require("swagger-jsdoc")
 
 const options = {

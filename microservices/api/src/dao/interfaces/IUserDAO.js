@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Interfaz abstracta para DAO de usuarios.
+ * Define el contrato que deben implementar UserPostgresDAO y UserMongoDAO.
+ */
+
+
 class IUserDAO {
   async getAllUsers() {
     throw new Error("Method not implemented")

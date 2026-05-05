@@ -1,5 +1,3 @@
-// tests/unit/services/reservationService.test.js
-
 const { NotFoundError, ForbiddenError } = require("../../../src/errors")
 
 describe("ReservationService", () => {
@@ -68,27 +66,34 @@ describe("ReservationService", () => {
     })
 
     describe("update", () => {
-        it("actualiza si existe", async () => {
-            reservationDAO.getById.mockResolvedValue({ id: 1 })
+        it("actualiza si existe y es propietario", async () => {
+            reservationDAO.getById.mockResolvedValue({ id: 1, user_id: 10 })
             reservationDAO.update.mockResolvedValue({ id: 1, updated: true })
 
-            const result = await reservationService.update(1, { foo: "bar" })
+            const result = await reservationService.update(1, { foo: "bar" }, 10)
 
             expect(reservationDAO.update).toHaveBeenCalledWith(1, { foo: "bar" })
             expect(result).toEqual({ id: 1, updated: true })
         })
 
-        it("lanza error si no existe", async () => {
+        it("lanza NotFoundError si no existe", async () => {
             reservationDAO.getById.mockResolvedValue(null)
 
-            await expect(reservationService.update(1, {}))
+            await expect(reservationService.update(1, {}, 10))
                 .rejects
                 .toThrow("Reservation not found")
+        })
+
+        it("lanza ForbiddenError si no es el dueño", async () => {
+            reservationDAO.getById.mockResolvedValue({ id: 1, user_id: 999 })
+
+            await expect(reservationService.update(1, { foo: "bar" }, 10))
+                .rejects
+                .toThrow("You can only update your own reservations")
         })
     })
 
     describe("cancel", () => {
-
         it("cancela si es el dueño", async () => {
             const reservation = { id: 1, user_id: 10 }
 
@@ -119,7 +124,6 @@ describe("ReservationService", () => {
                 .rejects
                 .toThrow("You can only cancel your own reservations")
         })
-
     })
 
 })

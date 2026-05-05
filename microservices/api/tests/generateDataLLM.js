@@ -1,3 +1,11 @@
+/**
+ * @fileoverview Script de seeding con Ollama (LLM local).
+ * Genera datos realistas de restaurantes, menús y productos via IA,
+ * luego los inserta en PostgreSQL o MongoDB según DB_TYPE.
+ * 
+ * Requiere: Ollama corriendo localmente con modelo configurado (default: llama3.2)
+ */
+
 require("dotenv").config({ path: "../../.env" })
 const { Ollama } = require("ollama")
 
@@ -7,9 +15,11 @@ const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "llama3.2"
 
 const ollama = new Ollama({ host: OLLAMA_HOST })
 
-// =====================
-// GENERADOR CON OLLAMA
-// =====================
+/**
+ * Envía un prompt a Ollama y extrae JSON válido de la respuesta.
+ * @param {string} prompt - Instrucción para el modelo
+ * @returns {Promise<Array>} Array JSON parseado
+ */
 async function generateWithOllama(prompt) {
     const response = await ollama.chat({
         model: OLLAMA_MODEL,
@@ -41,6 +51,10 @@ async function generateWithOllama(prompt) {
     return parsed
 }
 
+/**
+ * Genera 5 restaurantes costarricenses realistas via Ollama.
+ * @returns {Promise<Array<{name, description, address}>>}
+ */
 async function generateRestaurants() {
     console.log("Generando restaurantes con Ollama...")
     return await generateWithOllama(`
@@ -55,6 +69,11 @@ async function generateRestaurants() {
     `)
 }
 
+/**
+ * Genera 3 menús (secciones) para un restaurante específico.
+ * @param {string} restaurantName - Nombre del restaurante padre
+ * @returns {Promise<Array<{name, description}>>}
+ */
 async function generateMenus(restaurantName) {
     console.log(`  Generando menús para ${restaurantName}...`)
     return await generateWithOllama(`
@@ -69,6 +88,12 @@ async function generateMenus(restaurantName) {
     `)
 }
 
+/**
+ * Genera 4 productos para una sección de menú específica.
+ * @param {string} menuName - Nombre de la sección del menú
+ * @param {string} restaurantName - Nombre del restaurante padre
+ * @returns {Promise<Array<{name, description, price, is_available}>>}
+ */
 async function generateProducts(menuName, restaurantName) {
     console.log(`    Generando productos para menú "${menuName}"...`)
     return await generateWithOllama(`
@@ -84,9 +109,13 @@ async function generateProducts(menuName, restaurantName) {
     `)
 }
 
-// =====================
-// SEED POSTGRES
-// =====================
+/**
+ * Inserta datos generados en PostgreSQL con relaciones foreign key.
+ * @param {Array} restaurants - Restaurantes generados
+ * @param {Array<Array>} menusPerRestaurant - Menús por restaurante
+ * @param {Array<Array<Array>>} productsPerMenu - Productos por menú por restaurante
+ * @returns {Promise<void>}
+ */
 async function seedPostgres(restaurants, menusPerRestaurant, productsPerMenu) {
     const { Pool } = require("pg")
     const pool = new Pool({
@@ -145,15 +174,20 @@ async function seedPostgres(restaurants, menusPerRestaurant, productsPerMenu) {
             }
         }
 
-        console.log("\n✅ Seed de PostgreSQL completado")
+        console.log("\n Seed de PostgreSQL completado")
     } finally {
         await pool.end()
     }
 }
 
-// =====================
-// SEED MONGO
-// =====================
+/**
+ * Inserta datos generados en MongoDB con documentos embebidos.
+ * Los menús y productos se anidan dentro del documento restaurante.
+ * @param {Array} restaurants - Restaurantes generados
+ * @param {Array<Array>} menusPerRestaurant - Menús por restaurante
+ * @param {Array<Array<Array>>} productsPerMenu - Productos por menú por restaurante
+ * @returns {Promise<void>}
+ */
 async function seedMongo(restaurants, menusPerRestaurant, productsPerMenu) {
     const { MongoClient, ObjectId } = require("mongodb")
     const mongoUri = "mongodb://localhost:27017"
@@ -174,22 +208,14 @@ async function seedMongo(restaurants, menusPerRestaurant, productsPerMenu) {
                 continue
             }
 
-            const restaurantResult = await db.collection("restaurants").insertOne({
-                name: r.name,
-                description: r.description,
-                address: r.address,
-                created_at: new Date()
-            })
-
-            const restaurantId = restaurantResult.insertedId
-            console.log(`  ✓ Restaurante: ${r.name} (id: ${restaurantId})`)
-
+            // Construir los menus con productos embebidos
+            const embeddedMenus = []
             const menus = menusPerRestaurant[i]
+
             for (let j = 0; j < menus.length; j++) {
                 const m = menus[j]
-
-                // Crear los productos embebidos dentro del menú
                 const products = productsPerMenu[i][j]
+
                 const embeddedProducts = products.map(p => ({
                     product_id: new ObjectId().toString(),
                     name: p.name,
@@ -199,46 +225,62 @@ async function seedMongo(restaurants, menusPerRestaurant, productsPerMenu) {
                     created_at: new Date()
                 }))
 
-                const menuResult = await db.collection("menus").insertOne({
-                    restaurant_id: restaurantId,
+                embeddedMenus.push({
+                    _id: new ObjectId(),
                     name: m.name,
                     description: m.description,
-                    products: embeddedProducts,  // ← embebidos aquí
+                    products: embeddedProducts,
                     created_at: new Date()
                 })
 
-                const menuId = menuResult.insertedId
-                console.log(`    ✓ Menú: ${m.name} (id: ${menuId}) con ${embeddedProducts.length} productos`)
-                for (const p of embeddedProducts) {
+                console.log(`    Preparado menú: ${m.name} con ${embeddedProducts.length} productos`)
+            }
+
+            // Insertar restaurante con menus embebidos
+            const restaurantResult = await db.collection("restaurants").insertOne({
+                name: r.name,
+                description: r.description,
+                address: r.address,
+                menus: embeddedMenus,
+                created_at: new Date()
+            })
+
+            const restaurantId = restaurantResult.insertedId
+            console.log(`  ✓ Restaurante: ${r.name} (id: ${restaurantId}) con ${embeddedMenus.length} menús`)
+
+            for (const menu of embeddedMenus) {
+                console.log(`    ✓ Menú: ${menu.name} (id: ${menu._id}) con ${menu.products.length} productos`)
+                for (const p of menu.products) {
                     console.log(`      ✓ Producto: ${p.name} (₡${p.price})`)
                 }
             }
         }
 
-        console.log("\n✅ Seed de MongoDB completado")
+        console.log("\n Seed de MongoDB completado")
     } finally {
         await client.close()
     }
 }
 
-// =====================
-// MAIN
-// =====================
+/**
+ * Punto de entrada. Verifica conexión a Ollama, genera datos e inserta en BD.
+ * @returns {Promise<void>}
+ */
 async function main() {
-    console.log(`\n🚀 Iniciando generación de datos con Ollama (modelo: ${OLLAMA_MODEL})`)
-    console.log(`📦 Base de datos: ${DB_TYPE}\n`)
+    console.log(`\n Iniciando generación de datos con Ollama (modelo: ${OLLAMA_MODEL})`)
+    console.log(` Base de datos: ${DB_TYPE}\n`)
 
     try {
         const healthCheck = await ollama.list()
-        console.log(`✓ Ollama conectado, modelos disponibles: ${healthCheck.models.map(m => m.name).join(", ")}\n`)
+        console.log(` Ollama conectado, modelos disponibles: ${healthCheck.models.map(m => m.name).join(", ")}\n`)
     } catch (err) {
-        console.error("❌ No se puede conectar a Ollama. ¿Está corriendo?")
+        console.error(" No se puede conectar a Ollama. ¿Está corriendo?")
         process.exit(1)
     }
 
     try {
         const restaurants = await generateRestaurants()
-        console.log(`✓ ${restaurants.length} restaurantes generados\n`)
+        console.log(` ${restaurants.length} restaurantes generados\n`)
 
         const menusPerRestaurant = []
         const productsPerMenu = []
@@ -266,13 +308,13 @@ async function main() {
         const totalMenus = menusPerRestaurant.reduce((acc, m) => acc + m.length, 0)
         const totalProducts = productsPerMenu.reduce((acc, r) => acc + r.reduce((a, m) => a + m.length, 0), 0)
 
-        console.log(`\n🎉 Proceso completado exitosamente`)
+        console.log(`\n Proceso completado exitosamente`)
         console.log(`   ${restaurants.length} restaurantes`)
         console.log(`   ${totalMenus} menús`)
         console.log(`   ${totalProducts} productos`)
 
     } catch (error) {
-        console.error("\n❌ Error durante el seed:", error.message)
+        console.error("\n Error durante el seed:", error.message)
         process.exit(1)
     }
 }

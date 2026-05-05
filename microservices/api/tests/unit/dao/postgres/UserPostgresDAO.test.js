@@ -1,4 +1,3 @@
-// tests/unit/dao/postgres/UserPostgresDAO.test.js
 const { createMockPool } = require("../../../helpers/mockPool")
 
 describe("UserPostgresDAO", () => {

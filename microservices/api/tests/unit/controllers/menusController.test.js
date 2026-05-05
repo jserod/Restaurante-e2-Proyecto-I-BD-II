@@ -1,5 +1,3 @@
-// tests/unit/controllers/menusController.test.js
-
 const { createMockReq, createMockRes, createMockNext } = require("../../helpers/mockExpress")
 
 describe("MenusController", () => {
@@ -66,7 +64,6 @@ describe("MenusController", () => {
             expect(res.json).toHaveBeenCalledWith(menu)
         })
 
-        // LÍNEA 18: next(error) en getMenuById
         it("pasa errores a next", async () => {
             const error = new Error("Not found")
             menuService.getById.mockRejectedValue(error)
@@ -96,7 +93,6 @@ describe("MenusController", () => {
             expect(res.json).toHaveBeenCalledWith(menus)
         })
 
-        // LÍNEA 27: next(error) en getMenusByRestaurant
         it("pasa errores a next", async () => {
             const error = new Error("DB fail")
             menuService.getByRestaurant.mockRejectedValue(error)
@@ -156,7 +152,6 @@ describe("MenusController", () => {
             expect(res.json).toHaveBeenCalledWith({ error: "restaurantId and name are required" })
         })
 
-        // LÍNEA 40: next(error) en createMenu
         it("pasa errores a next", async () => {
             const error = new Error("DB fail")
             menuService.create.mockRejectedValue(error)
@@ -188,7 +183,6 @@ describe("MenusController", () => {
             expect(res.json).toHaveBeenCalledWith(updated)
         })
 
-        // LÍNEA 49: next(error) en updateMenu
         it("pasa errores a next", async () => {
             const error = new Error("Not found")
             menuService.update.mockRejectedValue(error)
@@ -217,7 +211,6 @@ describe("MenusController", () => {
             expect(res.json).toHaveBeenCalledWith({ message: "Menu deleted" })
         })
 
-        // LÍNEA 58: next(error) en deleteMenu
         it("pasa errores a next", async () => {
             const error = new Error("Not found")
             menuService.delete.mockRejectedValue(error)

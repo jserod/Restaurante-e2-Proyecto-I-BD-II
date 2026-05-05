@@ -1,13 +1,26 @@
-const createMockRedisClient = () => ({
-    get: jest.fn(),
-    setEx: jest.fn().mockResolvedValue(undefined),
-    keys: jest.fn(),
-    del: jest.fn()
+/**
+ * @fileoverview Cliente Redis singleton. Expone conexión lazy y manejador de errores.
+ */
+
+const { createClient } = require("redis")
+
+const client = createClient({
+    url: process.env.REDIS_URL || "redis://localhost:6379"
 })
 
-const createMockRedisModule = () => ({
-    connectRedis: jest.fn(),
-    client: createMockRedisClient()
-})
+client.on("error", (err) => console.error("Redis Client Error:", err))
 
-module.exports = { createMockRedisClient, createMockRedisModule }
+/**
+ * Establece la conexión con Redis si no está abierta.
+ * Múltiples llamadas no crean conexiones duplicadas.
+ * @async
+ * @returns {Promise<void>}
+ */
+async function connectRedis() {
+    if (!client.isOpen) {
+        await client.connect()
+        console.log("Redis connected (Search)")
+    }
+}
+
+module.exports = { client, connectRedis }

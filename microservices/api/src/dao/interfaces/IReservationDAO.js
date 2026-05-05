@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Interfaz abstracta para DAO de reservaciones.
+ * Define el contrato que deben implementar ReservationPostgresDAO y ReservationMongoDAO.
+ */
+
 class IReservationDAO {
     getAll() {
         throw new Error("Not implemented")

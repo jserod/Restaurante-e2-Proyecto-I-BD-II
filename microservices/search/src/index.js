@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Punto de entrada del microservicio de búsqueda.
+ * Expone endpoints de búsqueda con Elasticsearch, documentación Swagger y health check.
+ */
+
 require("dotenv").config()
 const express = require("express")
 const cors = require("cors")
@@ -62,6 +67,10 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: "Internal server error" })
 })
 
+/**
+ * Inicializa el índice Elasticsearch y levanta el servidor.
+ * @returns {Promise<void>}
+ */
 async function start() {
     try {
         await ensureIndex()

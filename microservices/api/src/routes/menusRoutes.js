@@ -21,7 +21,7 @@ const controller = require("../controllers/menusController")
  *       401:
  *         description: No autorizado
  */
-router.get("/", protect(), cache(120), controller.getAllMenus)
+router.get("/", protect(), cache(300), controller.getAllMenus)
 
 /**
  * @swagger

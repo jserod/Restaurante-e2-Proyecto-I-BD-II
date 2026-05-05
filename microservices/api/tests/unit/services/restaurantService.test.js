@@ -1,5 +1,3 @@
-// tests/unit/services/restaurantService.test.js
-
 const { NotFoundError, AppError } = require("../../../src/errors")
 
 describe("RestaurantService", () => {

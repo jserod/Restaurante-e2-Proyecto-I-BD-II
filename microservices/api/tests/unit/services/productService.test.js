@@ -1,5 +1,3 @@
-// tests/unit/services/productService.test.js
-
 const { NotFoundError } = require("../../../src/errors")
 
 describe("ProductService", () => {

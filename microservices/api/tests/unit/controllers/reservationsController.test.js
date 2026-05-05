@@ -1,4 +1,3 @@
-// tests/unit/controllers/reservationsController.test.js
 const { createMockReq, createMockRes, createMockNext } = require("../../helpers/mockExpress")
 
 describe("reservationsController", () => {
@@ -177,7 +176,7 @@ describe("reservationsController", () => {
     })
 
     describe("updateReservation", () => {
-        it("actualiza reserva", async () => {
+        it("actualiza reserva si es propietario", async () => {
             const updated = {
                 id: 1,
                 partySize: 6,
@@ -187,6 +186,7 @@ describe("reservationsController", () => {
             reservationService.update.mockResolvedValue(updated)
 
             const req = createMockReq({
+                user: { id: 5, dbId: 10 },
                 params: { id: "1" },
                 body: {
                     partySize: 6,
@@ -203,7 +203,7 @@ describe("reservationsController", () => {
                 partySize: 6,
                 reservationDate: "2025-01-02T20:00:00Z",
                 notes: "Updated notes"
-            })
+            }, 10)
             expect(res.json).toHaveBeenCalledWith(updated)
         })
 
@@ -212,6 +212,7 @@ describe("reservationsController", () => {
             reservationService.update.mockResolvedValue(updated)
 
             const req = createMockReq({
+                user: { id: 5, dbId: 10 },
                 params: { id: "1" },
                 body: { partySize: 8 }
             })
@@ -220,15 +221,33 @@ describe("reservationsController", () => {
 
             await reservationsController.updateReservation(req, res, next)
 
-            expect(reservationService.update).toHaveBeenCalledWith("1", { partySize: 8 })
+            expect(reservationService.update).toHaveBeenCalledWith("1", { partySize: 8 }, 10)
         })
 
-        it("pasa errores a next", async () => {
-            const error = new Error("Not found")
+        it("pasa errores a next (NotFound)", async () => {
+            const error = new Error("Reservation not found")
             reservationService.update.mockRejectedValue(error)
 
             const req = createMockReq({
+                user: { id: 5, dbId: 10 },
                 params: { id: "999" },
+                body: { partySize: 4 }
+            })
+            const res = createMockRes()
+            const next = createMockNext()
+
+            await reservationsController.updateReservation(req, res, next)
+
+            expect(next).toHaveBeenCalledWith(error)
+        })
+
+        it("pasa errores a next (Forbidden)", async () => {
+            const error = new Error("You can only update your own reservations")
+            reservationService.update.mockRejectedValue(error)
+
+            const req = createMockReq({
+                user: { id: 5, dbId: 99 },
+                params: { id: "1" },
                 body: { partySize: 4 }
             })
             const res = createMockRes()

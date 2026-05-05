@@ -1,8 +1,15 @@
+/**
+ * @fileoverview Middleware de caching con Redis.
+ * Proporciona cacheo de respuestas GET, invalidación por patrón e invalidación automática tras cambios.
+ */
+
 const { client, connectRedis } = require("../config/redis")
 
 /**
- * Middleware que cachea respuestas GET en Redis
- * @param {number} ttlSeconds - Tiempo de vida en segundos
+ * Cachea respuestas GET en Redis con TTL configurable.
+ * Intercepta res.json para almacenar el resultado antes de enviarlo.
+ * @param {number} [ttlSeconds=60] - Tiempo de vida en segundos
+ * @returns {Function} Middleware de Express
  */
 function cache(ttlSeconds = 60) {
     return async (req, res, next) => {
@@ -41,8 +48,9 @@ function cache(ttlSeconds = 60) {
 }
 
 /**
- * Invalida claves de caché por patrón
- * @param {string} pattern - Patrón de claves a borrar, ej: "cache:GET:/products*"
+ * Elimina claves de caché que coincidan con un patrón.
+ * @param {string} pattern - Patrón de claves, ej: "cache:GET:/products*"
+ * @returns {Promise<void>}
  */
 async function invalidateCache(pattern) {
     try {
@@ -58,8 +66,10 @@ async function invalidateCache(pattern) {
 }
 
 /**
- * Si hubo respuesta exitosa, llama invalidar claves de caché por patrón
- * @param {string} pattern - Patrón de claves a borrar, ej: "cache:GET:/products*"
+ * Middleware que invalida caché automáticamente tras una respuesta exitosa (status < 400).
+ * Útil para operaciones POST/PUT/DELETE que modifican recursos cacheados.
+ * @param {string} pattern - Patrón de claves a invalidar
+ * @returns {Function} Middleware de Express
  */
 function invalidateOnSuccess(pattern) {
     return async (req, res, next) => {
