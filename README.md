@@ -16,7 +16,6 @@ Sistema distribuido para la gestion de restaurantes, reservas, menus, productos 
 - [Uso](#uso)
 - [Cambio de Base de Datos](#cambio-de-base-de-datos)
 - [Escalabilidad](#escalabilidad)
-- [Kubernetes](#kubernetes)
 - [Tests](#tests)
 - [CICD](#cicd)
 - [Generacion de Datos con LLM](#generacion-de-datos-con-llm)
@@ -154,6 +153,9 @@ Viene con un script para iniciar Docker y Kubernetes, en powershell correr:
 # Levantar todos los servicios
 ./script/start.ps1
 
+#otra opcion
+docker compose up --scale api=3 --scale search-service=2
+
 ```
 
 ---
@@ -242,17 +244,6 @@ const productDAO = DAOFactory.getProductDAO()
 curl http://localhost/_host
 curl http://localhost/search/_host
 ```
-
-### Kubernetes 
-
-El proyecto incluye manifiestos para desplegar en cualquier cluster de Kubernetes local (ej. Docker Desktop). Los servicios de infraestructura (MongoDB, PostgreSQL, Redis, ElasticSearch, Keycloak) deben estar disponibles externamente al cluster o desplegarse por separado.
-
-### Desplegar
-
-```bash
-kubectl apply -f k8s/
-
----
 
 ## Tests
 

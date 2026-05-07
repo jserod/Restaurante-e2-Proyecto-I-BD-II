@@ -43,8 +43,8 @@ if ($times[-1] -lt $times[0]) {
     $diff = $times[0] - $times[-1]
     Write-Host ""
     Write-Host "[OK] El cache funciona correctamente" -ForegroundColor Green
-    Write-Host ("     Diferencia: {0} ms más rápido" -f $diff)
+    Write-Host ("     Diferencia: {0} ms ms rapido" -f $diff)
 } else {
     Write-Host ""
-    Write-Host "[!] No se detectó mejora con cache" -ForegroundColor Yellow
+    Write-Host "[!] No se detect mejora con cache" -ForegroundColor Yellow
 }

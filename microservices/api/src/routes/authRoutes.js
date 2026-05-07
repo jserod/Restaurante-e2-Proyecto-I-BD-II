@@ -48,7 +48,7 @@ router.post("/login", authController.login)
  *             properties:
  *               username:
  *                 type: string
- *                 example: nuevouser
+ *                 example: testuser
  *               email:
  *                 type: string
  *                 example: nuevo@test.com
